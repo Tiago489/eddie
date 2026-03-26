@@ -1,0 +1,57 @@
+{
+  "interchanges": [
+    {
+      "ISA_01_AuthorizationInformationQualifier": "00",
+      "ISA_02_AuthorizationInformation": "          ",
+      "ISA_06_InterchangeSenderId": "RECEIVER",
+      "ISA_08_InterchangeReceiverId": "SENDER",
+      "ISA_13_InterchangeControlNumber": "000000002",
+      "ISA_14_AcknowledgmentRequested": "0",
+      "ISA_15_InterchangeUsageIndicator": "P",
+      "functional_groups": [
+        {
+          "GS_02_ApplicationSenderCode": "RECEIVER",
+          "GS_03_ApplicationReceiverCode": "SENDER",
+          "GS_04_Date": "20230102",
+          "GS_05_Time": "0800",
+          "GS_06_GroupControlNumber": "2",
+          "transaction_sets": [
+            {
+              "heading": {
+                "transaction_set_header_ST": {
+                  "ST_01_TransactionSetIdentifierCode": "997",
+                  "ST_02_TransactionSetControlNumber": "0001"
+                },
+                "functional_group_response_header_AK1": {
+                  "AK1_01_FunctionalIdentifierCode": "SM",
+                  "AK1_02_GroupControlNumber": "1"
+                },
+                "transaction_set_response_loop_AK2": [
+                  {
+                    "transaction_set_response_header_AK2": {
+                      "AK2_01_TransactionSetIdentifierCode": "204",
+                      "AK2_02_TransactionSetControlNumber": "0001"
+                    },
+                    "transaction_set_response_trailer_AK5": {
+                      "AK5_01_TransactionSetAcknowledgmentCode": "A"
+                    }
+                  }
+                ],
+                "functional_group_response_trailer_AK9": {
+                  "AK9_01_FunctionalGroupAcknowledgeCode": "A",
+                  "AK9_02_NumberOfTransactionSetsIncluded": "1",
+                  "AK9_03_NumberOfReceivedTransactionSets": "1",
+                  "AK9_04_NumberOfAcceptedTransactionSets": "1"
+                },
+                "transaction_set_trailer_SE": {
+                  "SE_01_NumberOfIncludedSegments": "5",
+                  "SE_02_TransactionSetControlNumber": "0001"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

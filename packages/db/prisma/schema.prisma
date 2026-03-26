@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tradingPartners TradingPartner[]
+  mappings        Mapping[]
+  downstreamApis  DownstreamApi[]
+  transactions    Transaction[]
+}
+
+model TradingPartner {
+  id        String                  @id @default(cuid())
+  orgId     String
+  org       Organization            @relation(fields: [orgId], references: [id])
+  name      String
+  isaId     String
+  direction TradingPartnerDirection
+  isActive  Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  sftpConnections SftpConnection[]
+  transactions    Transaction[]
+
+  @@index([orgId])
+  @@index([isaId])
+}
+
+enum TradingPartnerDirection {
+  INBOUND
+  OUTBOUND
+  BOTH
+}
+
+model SftpConnection {
+  id                     String         @id @default(cuid())
+  tradingPartnerId       String
+  tradingPartner         TradingPartner @relation(fields: [tradingPartnerId], references: [id])
+  host                   String
+  port                   Int            @default(22)
+  username               String
+  encryptedPassword      String
+  remotePath             String
+  archivePath            String
+  pollingIntervalSeconds Int            @default(300)
+  filePattern            String         @default("*.edi")
+  isActive               Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  @@index([tradingPartnerId])
+}
+
+model Mapping {
+  id                 String         @id @default(cuid())
+  orgId              String
+  org                Organization   @relation(fields: [orgId], references: [id])
+  name               String
+  transactionSet     TransactionSet
+  direction          MappingDirection
+  jsonataExpression  String         @db.Text
+  version            Int            @default(1)
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([orgId])
+}
+
+enum TransactionSet {
+  EDI_204
+  EDI_211
+  EDI_214
+  EDI_210
+  EDI_990
+  EDI_997
+}
+
+enum MappingDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model DownstreamApi {
+  id                   String       @id @default(cuid())
+  orgId                String
+  org                  Organization @relation(fields: [orgId], references: [id])
+  name                 String
+  baseUrl              String
+  authType             AuthType     @default(NONE)
+  encryptedCredentials String?
+  headers              Json?
+  timeoutMs            Int          @default(30000)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([orgId])
+}
+
+enum AuthType {
+  NONE
+  API_KEY
+  BEARER
+  BASIC
+}
+
+model Transaction {
+  id                   String            @id @default(cuid())
+  orgId                String
+  org                  Organization      @relation(fields: [orgId], references: [id])
+  tradingPartnerId     String
+  tradingPartner       TradingPartner    @relation(fields: [tradingPartnerId], references: [id])
+  transactionSet       TransactionSet
+  direction            MappingDirection
+  status               TransactionStatus @default(RECEIVED)
+  rawEdi               String?           @db.Text
+  jediPayload          Json?
+  outboundPayload      Json?
+  downstreamStatusCode Int?
+  errorMessage         String?
+  isaControlNumber     String
+  contentHash          String
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  events TransactionEvent[]
+
+  @@index([orgId])
+  @@index([tradingPartnerId])
+  @@index([contentHash])
+  @@index([isaControlNumber])
+}
+
+enum TransactionStatus {
+  RECEIVED
+  PARSING
+  MAPPING
+  DELIVERING
+  DELIVERED
+  FAILED
+  DUPLICATE
+}
+
+model TransactionEvent {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  type          String
+  message       String
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([transactionId])
+}

@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: edi
+      POSTGRES_PASSWORD: edi
+      POSTGRES_DB: edi_platform
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - '6379:6379'
+
+  sftp:
+    image: atmoz/sftp
+    ports:
+      - '2222:22'
+    command: ediuser:edipassword:::upload
+
+volumes:
+  pgdata:

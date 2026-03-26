@@ -1,0 +1,17 @@
+{
+  "name": "@edi-platform/sftp",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": { "build": "tsc" },
+  "dependencies": {
+    "@edi-platform/types": "workspace:*",
+    "ssh2-sftp-client": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/ssh2-sftp-client": "^9.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(npm install:*)",
+      "Bash(git init:*)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm test:*)",
+      "Bash(docker compose:*)",
+      "Bash(pnpm --filter @edi-platform/edi-core test)",
+      "Bash(npx vitest:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls node_modules/.pnpm/jsonata@*/node_modules/jsonata/jsonata.js)",
+      "Bash(node -e \"const j = require\\(''jsonata''\\); const e = j\\(''1+1''\\); console.log\\(typeof e.evaluate\\); console.log\\(e.evaluate.toString\\(\\).slice\\(0, 200\\)\\)\")",
+      "Bash(node -e \"const j = require\\(''/home/tiago/Projects/Eddie/node_modules/.pnpm/jsonata@2.1.0/node_modules/jsonata/jsonata.js''\\); const e = j\\(''1+1''\\); console.log\\(Object.keys\\(e\\)\\); console.log\\(e.evaluate.length\\);\")",
+      "Bash(node -e \":*)",
+      "Bash(grep -r \"timebox\\\\|timeout\" /home/tiago/Projects/Eddie/node_modules/.pnpm/jsonata@2.1.0/node_modules/jsonata/src/*.js)"
+    ]
+  }
+}

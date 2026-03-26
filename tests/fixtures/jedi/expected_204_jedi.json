@@ -1,0 +1,137 @@
+{
+  "interchanges": [
+    {
+      "ISA_01_AuthorizationInformationQualifier": "00",
+      "ISA_02_AuthorizationInformation": "          ",
+      "ISA_06_InterchangeSenderId": "SENDER",
+      "ISA_08_InterchangeReceiverId": "RECEIVER",
+      "ISA_13_InterchangeControlNumber": "000000001",
+      "ISA_14_AcknowledgmentRequested": "0",
+      "ISA_15_InterchangeUsageIndicator": "P",
+      "functional_groups": [
+        {
+          "GS_02_ApplicationSenderCode": "SENDER",
+          "GS_03_ApplicationReceiverCode": "RECEIVER",
+          "GS_04_Date": "20230101",
+          "GS_05_Time": "1200",
+          "GS_06_GroupControlNumber": "1",
+          "transaction_sets": [
+            {
+              "heading": {
+                "transaction_set_header_ST": {
+                  "ST_01_TransactionSetIdentifierCode": "204",
+                  "ST_02_TransactionSetControlNumber": "0001"
+                },
+                "beginning_segment_for_shipper_order_B2": {
+                  "B2_02_StandardCarrierAlphaCode": "SCAC",
+                  "B2_04_ShipmentIdentificationNumber": "SH12345",
+                  "B2_06_ShipmentMethodOfPayment": "PP"
+                },
+                "reference_identification_L11": [
+                  {
+                    "L11_01_ReferenceIdentification": "REF123",
+                    "L11_02_ReferenceIdentificationQualifier": "SI"
+                  }
+                ],
+                "date_time_reference_G62": [
+                  {
+                    "G62_01_DateQualifier": "64",
+                    "G62_02_Date": "20230115"
+                  }
+                ],
+                "party_identification_loop_N1": [
+                  {
+                    "name_N1": {
+                      "N1_01_EntityIdentifierCode": "SH",
+                      "N1_02_Name": "Shipper Inc",
+                      "N1_03_IdentificationCodeQualifier": "93",
+                      "N1_04_IdentificationCode": "SHIP001"
+                    },
+                    "address_information_N3": {
+                      "N3_01_AddressInformation": "100 Shipping Lane"
+                    },
+                    "geographic_location_N4": {
+                      "N4_01_CityName": "Chicago",
+                      "N4_02_StateOrProvinceCode": "IL",
+                      "N4_03_PostalCode": "60601"
+                    }
+                  }
+                ]
+              },
+              "detail": {
+                "stop_off_details_loop_S5": [
+                  {
+                    "stop_off_details_S5": {
+                      "S5_01_StopSequenceNumber": "1",
+                      "S5_02_StopReasonCode": "CL"
+                    },
+                    "party_identification_loop_N1": [
+                      {
+                        "name_N1": {
+                          "N1_01_EntityIdentifierCode": "SF",
+                          "N1_02_Name": "Origin Warehouse",
+                          "N1_03_IdentificationCodeQualifier": "93",
+                          "N1_04_IdentificationCode": "ORIG001"
+                        },
+                        "address_information_N3": {
+                          "N3_01_AddressInformation": "200 Origin St"
+                        },
+                        "geographic_location_N4": {
+                          "N4_01_CityName": "Chicago",
+                          "N4_02_StateOrProvinceCode": "IL",
+                          "N4_03_PostalCode": "60602"
+                        }
+                      }
+                    ],
+                    "date_time_reference_G62": [
+                      {
+                        "G62_01_DateQualifier": "10",
+                        "G62_02_Date": "20230115"
+                      }
+                    ]
+                  },
+                  {
+                    "stop_off_details_S5": {
+                      "S5_01_StopSequenceNumber": "2",
+                      "S5_02_StopReasonCode": "CU"
+                    },
+                    "party_identification_loop_N1": [
+                      {
+                        "name_N1": {
+                          "N1_01_EntityIdentifierCode": "ST",
+                          "N1_02_Name": "Destination Hub",
+                          "N1_03_IdentificationCodeQualifier": "93",
+                          "N1_04_IdentificationCode": "DEST001"
+                        },
+                        "address_information_N3": {
+                          "N3_01_AddressInformation": "300 Destination Ave"
+                        },
+                        "geographic_location_N4": {
+                          "N4_01_CityName": "Dallas",
+                          "N4_02_StateOrProvinceCode": "TX",
+                          "N4_03_PostalCode": "75201"
+                        }
+                      }
+                    ],
+                    "date_time_reference_G62": [
+                      {
+                        "G62_01_DateQualifier": "11",
+                        "G62_02_Date": "20230117"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "summary": {
+                "transaction_set_trailer_SE": {
+                  "SE_01_NumberOfIncludedSegments": "18",
+                  "SE_02_TransactionSetControlNumber": "0001"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

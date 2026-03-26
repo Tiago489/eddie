@@ -1,0 +1,25 @@
+{
+  "name": "@edi-platform/worker",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@edi-platform/db": "workspace:*",
+    "@edi-platform/edi-core": "workspace:*",
+    "@edi-platform/jedi": "workspace:*",
+    "@edi-platform/sftp": "workspace:*",
+    "@edi-platform/types": "workspace:*",
+    "bullmq": "^5.4.0",
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

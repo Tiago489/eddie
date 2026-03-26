@@ -1,0 +1,25 @@
+{
+  "name": "@edi-platform/api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@edi-platform/db": "workspace:*",
+    "@edi-platform/types": "workspace:*",
+    "@fastify/cors": "^9.0.0",
+    "bullmq": "^5.4.0",
+    "fastify": "^4.26.0",
+    "fastify-plugin": "^4.5.0",
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}
