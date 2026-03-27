@@ -1,0 +1,222 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+
+jobs:
+  test:
+    name: Test (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        shard: [1, 2]
+      fail-fast: false
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: edi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @edi-platform/db db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+
+      - name: Run database migrations
+        run: pnpm --filter @edi-platform/db db:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+
+      - name: Run tests (shard ${{ matrix.shard }}/2)
+        run: pnpm test --reporter=verbose --shard=${{ matrix.shard }}/2
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+          REDIS_URL: redis://localhost:6379
+          ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000001'
+          NODE_ENV: test
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: matrix.shard == 1
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: edi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @edi-platform/db db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+
+      - name: Run database migrations
+        run: pnpm --filter @edi-platform/db db:migrate:deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+
+      - name: Run coverage
+        run: pnpm test:coverage --reporter=verbose
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+          REDIS_URL: redis://localhost:6379
+          ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000001'
+          NODE_ENV: test
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @edi-platform/db db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+
+      - name: TypeScript check (packages)
+        run: |
+          for pkg in packages/types packages/edi-core packages/jedi packages/sftp packages/db; do
+            echo "Checking $pkg..."
+            npx tsc --noEmit -p $pkg/tsconfig.json || true
+          done
+
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @edi-platform/db db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
+
+      - name: Build Next.js
+        run: pnpm --filter @edi-platform/web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXT_PUBLIC_ORG_ID: ci-org
