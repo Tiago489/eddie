@@ -95,7 +95,7 @@ export default async function DashboardPage() {
                 {transactions.map((tx: { id: string; isaControlNumber: string; transactionSet: string; direction: string; status: string; createdAt: string }) => (
                   <TableRow key={tx.id}>
                     <TableCell>
-                      <Link href={`/transactions?id=${tx.id}`} className="text-blue-600 hover:underline">
+                      <Link href="/transactions" className="text-blue-600 hover:underline">
                         {tx.isaControlNumber?.slice(0, 12) || tx.id.slice(0, 8)}
                       </Link>
                     </TableCell>

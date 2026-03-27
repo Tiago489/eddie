@@ -19,7 +19,7 @@ export default function TransactionsPage() {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
   const { data, isLoading } = useSWR(
-    ['transactions', page, status],
+    ORG_ID ? ['transactions', page, status] : null,
     () => api.getTransactions({ orgId: ORG_ID, page: String(page), limit: '50', ...(status ? { status } : {}) }),
   );
 
