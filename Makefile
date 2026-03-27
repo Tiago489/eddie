@@ -1,4 +1,4 @@
-.PHONY: dev prod prod-build down down-dev logs logs-api logs-worker ps migrate test key
+.PHONY: dev prod prod-build down down-dev logs logs-api logs-worker ps migrate test key setup seed reset
 
 # Development
 dev:
@@ -39,6 +39,18 @@ migrate:
 # Testing
 test:
 	pnpm test
+
+# Setup (new developer onboarding)
+setup:
+	pnpm setup
+
+# Seed database
+seed:
+	pnpm db:seed
+
+# Reset database
+reset:
+	pnpm db:reset
 
 # Generate encryption key
 key:
