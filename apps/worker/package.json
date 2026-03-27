@@ -15,6 +15,7 @@
     "@edi-platform/sftp": "workspace:*",
     "@edi-platform/types": "workspace:*",
     "bullmq": "^5.4.0",
+    "dotenv": "^17.3.1",
     "ioredis": "^5.3.0"
   },
   "devDependencies": {

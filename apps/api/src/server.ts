@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@edi-platform/db';
 import { tradingPartnersRoutes } from './routes/trading-partners';
