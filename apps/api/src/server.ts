@@ -30,6 +30,12 @@ export function buildApp(opts?: AppOptions): FastifyInstance {
     app.decorate('queues', opts.queues);
   }
 
+  app.get('/health', async () => ({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  }));
+
   app.register(tradingPartnersRoutes, { prefix: '/api/trading-partners' });
   app.register(sftpConnectionsRoutes, { prefix: '/api/sftp-connections' });
   app.register(mappingsRoutes, { prefix: '/api/mappings' });

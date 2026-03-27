@@ -7,7 +7,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "generate:key": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
