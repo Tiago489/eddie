@@ -19,7 +19,22 @@
       "Bash(grep -r \"timebox\\\\|timeout\" /home/tiago/Projects/Eddie/node_modules/.pnpm/jsonata@2.1.0/node_modules/jsonata/src/*.js)",
       "Bash(pnpm --filter @edi-platform/worker add -D @testcontainers/postgresql @testcontainers/redis msw)",
       "Bash(DATABASE_URL=\"postgresql://edi:edi@localhost:5432/edi_platform\" npx prisma migrate dev --name init --create-only)",
-      "Bash(DATABASE_URL=\"postgresql://edi:edi@localhost:5432/edi_platform\" npx prisma generate)"
+      "Bash(DATABASE_URL=\"postgresql://edi:edi@localhost:5432/edi_platform\" npx prisma generate)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(pnpm --filter @edi-platform/api add -D @testcontainers/postgresql)",
+      "Bash(pnpm --filter @edi-platform/web add class-variance-authority clsx tailwind-merge lucide-react @radix-ui/react-slot @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-select @radix-ui/react-label @radix-ui/react-separator @radix-ui/react-tabs @radix-ui/react-toast @radix-ui/react-avatar @radix-ui/react-alert-dialog @radix-ui/react-checkbox swr @monaco-editor/react)",
+      "Bash(pnpm --filter @edi-platform/web add tailwindcss-animate)",
+      "Bash(pnpm --filter @edi-platform/web build)",
+      "Bash(gh run:*)",
+      "Bash(DOCKER_BUILDKIT=1 docker build --network=host -f apps/worker/Dockerfile -t eddie-worker .)",
+      "Bash(docker run:*)",
+      "Bash(DOCKER_BUILDKIT=1 docker build --network=host --dns=8.8.8.8 -f apps/worker/Dockerfile -t eddie-worker .)",
+      "Bash(DOCKER_BUILDKIT=1 docker build --network=host -f apps/web/Dockerfile -t eddie-web --build-arg NEXT_PUBLIC_API_URL=http://localhost:3001 --build-arg NEXT_PUBLIC_ORG_ID=test-org .)",
+      "Bash(DOCKER_BUILDKIT=1 docker build --no-cache --network=host -f apps/api/Dockerfile -t eddie-prod-api .)",
+      "Bash(DOCKER_BUILDKIT=1 docker build --network=host -f apps/api/Dockerfile -t eddie-prod-api:latest .)"
     ]
   }
 }
