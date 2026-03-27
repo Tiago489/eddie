@@ -1,23 +1,55 @@
 import { FastifyInstance } from 'fastify';
+import { encrypt } from '../lib/crypto';
+
+function omitCredentials(record: Record<string, unknown>) {
+  const { encryptedCredentials, ...rest } = record;
+  return rest;
+}
 
 export async function downstreamApisRoutes(app: FastifyInstance) {
-  app.get('/', async (_request, _reply) => {
-    return { data: [], total: 0 };
+  app.post('/', async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+    const { credentials, ...rest } = body;
+    const data: Record<string, unknown> = { ...rest };
+    if (credentials) {
+      data.encryptedCredentials = encrypt(credentials as string);
+    }
+    const record = await app.prisma.downstreamApi.create({ data: data as any });
+    return reply.status(201).send(omitCredentials(record as unknown as Record<string, unknown>));
   });
 
-  app.get('/:id', async (_request, _reply) => {
-    return { data: null };
+  app.get('/', async (request, reply) => {
+    const { orgId } = request.query as { orgId?: string };
+    const data = await app.prisma.downstreamApi.findMany({
+      where: orgId ? { orgId } : {},
+    });
+    return reply.send({ data: data.map((r) => omitCredentials(r as unknown as Record<string, unknown>)) });
   });
 
-  app.post('/', async (_request, _reply) => {
-    return { data: null };
+  app.get('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const record = await app.prisma.downstreamApi.findUnique({ where: { id } });
+    if (!record) return reply.status(404).send({ error: 'Not found' });
+    return reply.send(omitCredentials(record as unknown as Record<string, unknown>));
   });
 
-  app.put('/:id', async (_request, _reply) => {
-    return { data: null };
+  app.put('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as Record<string, unknown>;
+    const updateData: Record<string, unknown> = {};
+    if (body.credentials) {
+      updateData.encryptedCredentials = encrypt(body.credentials as string);
+    }
+    for (const [key, value] of Object.entries(body)) {
+      if (key !== 'credentials') updateData[key] = value;
+    }
+    const record = await app.prisma.downstreamApi.update({ where: { id }, data: updateData as any });
+    return reply.send(omitCredentials(record as unknown as Record<string, unknown>));
   });
 
-  app.delete('/:id', async (_request, _reply) => {
-    return { success: true };
+  app.delete('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await app.prisma.downstreamApi.delete({ where: { id } });
+    return reply.send({ success: true });
   });
 }
