@@ -18,6 +18,9 @@
     "ioredis": "^5.3.0"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^11.13.0",
+    "@testcontainers/redis": "^11.13.0",
+    "msw": "^2.12.14",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
     "vitest": "^1.4.0"

@@ -28,7 +28,9 @@
       "@prisma/engines",
       "esbuild",
       "prisma",
-      "ssh2"
+      "ssh2",
+      "msw",
+      "protobufjs"
     ]
   }
 }

@@ -1,82 +1,210 @@
-import { describe, it, expect, vi } from 'vitest';
-import type { InboundJobPayload } from '@edi-platform/types';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { setupTestDb, teardownTestDb, getDb } from './helpers/db';
+import { createMockApi } from './helpers/mock-api';
+import { createMockQueue } from './helpers/mock-queue';
+import { processInboundJob } from '../jobs/process-inbound.job';
 
-// Mocked dependencies - will be wired up during implementation
-const mockParser = {
-  parse: vi.fn(),
-};
+const RAW_EDI_204 = readFileSync(
+  resolve(__dirname, '../../../../tests/fixtures/edi/sample_204.edi'),
+  'utf-8',
+);
 
-const mockToJedi = vi.fn();
+describe('processInboundJob', { timeout: 60000 }, () => {
+  let orgId: string;
+  let tradingPartnerId: string;
 
-const mockDeliverDownstream = vi.fn();
+  beforeAll(async () => {
+    const prisma = await setupTestDb();
 
-const mockUpdateTransaction = vi.fn();
+    const org = await prisma.organization.create({
+      data: { name: 'Test Org' },
+    });
+    orgId = org.id;
 
-const mockFindByContentHash = vi.fn();
+    const tp = await prisma.tradingPartner.create({
+      data: {
+        orgId,
+        name: 'Test Partner',
+        isaId: 'SHIPPER',
+        isActive: true,
+        direction: 'INBOUND',
+      },
+    });
+    tradingPartnerId = tp.id;
 
-describe('processInbound', () => {
-  const basePayload: InboundJobPayload = {
-    sftpConnectionId: 'sftp-1',
-    tradingPartnerId: 'tp-1',
-    orgId: 'org-1',
-    fileName: 'test.edi',
-    rawEdi: 'ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       *230101*1200*U*00401*000000001*0*P*>~GS*SM*SENDER*RECEIVER*20230101*1200*1*X*004010~ST*204*0001~SE*2*0001~GE*1*1~IEA*1*000000001~',
-  };
+    await prisma.downstreamApi.create({
+      data: {
+        orgId,
+        name: 'Test API',
+        baseUrl: 'http://mock-api.test',
+        authType: 'NONE',
+        timeoutMs: 3000,
+      },
+    });
 
-  it('should call the parser with raw EDI string', async () => {
-    mockParser.parse.mockReturnValue({ success: true, data: { isaControlNumber: '000000001', transactionSetId: '204', segments: [] } });
-    mockToJedi.mockReturnValue({ transactionSet: '204', data: {} });
-    mockDeliverDownstream.mockResolvedValue({ status: 200 });
-    mockFindByContentHash.mockResolvedValue(null);
-
-    // When implementation exists, processInbound(basePayload) would call parser
-    // For now, verify the mock setup is correct
-    const parseResult = mockParser.parse(basePayload.rawEdi);
-    expect(parseResult.success).toBe(true);
-    expect(mockParser.parse).toHaveBeenCalledWith(basePayload.rawEdi);
-  });
-
-  it('should call JEDI transformer on parse success', async () => {
-    const parsedData = { isaControlNumber: '000000001', transactionSetId: '204', segments: [] };
-    mockParser.parse.mockReturnValue({ success: true, data: parsedData });
-    mockToJedi.mockReturnValue({ transactionSet: '204', data: {} });
-
-    mockParser.parse(basePayload.rawEdi);
-    const jediResult = mockToJedi(parsedData);
-    expect(jediResult).toHaveProperty('transactionSet', '204');
-    expect(mockToJedi).toHaveBeenCalledWith(parsedData);
-  });
-
-  it('should call the downstream API on transform success', async () => {
-    const jediPayload = { transactionSet: '204', data: { stops: [] } };
-    mockDeliverDownstream.mockResolvedValue({ status: 200 });
-
-    const result = await mockDeliverDownstream(jediPayload);
-    expect(result.status).toBe(200);
-    expect(mockDeliverDownstream).toHaveBeenCalledWith(jediPayload);
-  });
-
-  it('should update Transaction status to FAILED on any failure', async () => {
-    mockParser.parse.mockReturnValue({ success: false, error: 'Invalid ISA segment' });
-
-    const parseResult = mockParser.parse(basePayload.rawEdi);
-    expect(parseResult.success).toBe(false);
-
-    // On failure, transaction should be marked FAILED
-    await mockUpdateTransaction('tx-1', { status: 'FAILED', errorMessage: 'Invalid ISA segment' });
-    expect(mockUpdateTransaction).toHaveBeenCalledWith('tx-1', {
-      status: 'FAILED',
-      errorMessage: 'Invalid ISA segment',
+    await prisma.mapping.create({
+      data: {
+        orgId,
+        name: 'Identity 204',
+        transactionSet: 'EDI_204',
+        direction: 'INBOUND',
+        jsonataExpression: '$$',
+        version: 1,
+        isActive: true,
+      },
     });
   });
 
-  it('should skip processing and mark DUPLICATE for same contentHash', async () => {
-    mockFindByContentHash.mockResolvedValue({ id: 'existing-tx', status: 'DELIVERED' });
+  afterAll(async () => {
+    await teardownTestDb();
+  });
 
-    const existing = await mockFindByContentHash('abc123hash');
-    expect(existing).not.toBeNull();
+  beforeEach(async () => {
+    await getDb().transactionEvent.deleteMany();
+    await getDb().transaction.deleteMany();
+  });
 
-    await mockUpdateTransaction('new-tx', { status: 'DUPLICATE' });
-    expect(mockUpdateTransaction).toHaveBeenCalledWith('new-tx', { status: 'DUPLICATE' });
+  it('should process a valid 204 EDI end-to-end', async () => {
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, { ok: true });
+    server.listen();
+
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId, orgId },
+      { prisma: getDb(), queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    expect(result.success).toBe(true);
+
+    const tx = await getDb().transaction.findFirst();
+    expect(tx?.status).toBe('DELIVERED');
+    expect(tx?.rawEdi).toBe(RAW_EDI_204);
+    expect(tx?.jediPayload).not.toBeNull();
+    expect(tx?.downstreamStatusCode).toBe(200);
+
+    expect(queue.jobs).toHaveLength(1);
+    expect(queue.jobs[0].name).toBe('send-997');
+  });
+
+  it('should detect duplicate EDI by contentHash', async () => {
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, { ok: true });
+    server.listen();
+
+    const deps = { prisma: getDb(), queues: { ack997: queue } };
+    const payload = { rawEdi: RAW_EDI_204, tradingPartnerId, orgId };
+
+    const result1 = await processInboundJob(payload, deps);
+    expect(result1.success).toBe(true);
+
+    const result2 = await processInboundJob(payload, deps);
+    expect(result2.success).toBe(true);
+
+    server.close();
+
+    const txs = await getDb().transaction.findMany({ orderBy: { createdAt: 'asc' } });
+    expect(txs).toHaveLength(2);
+    expect(txs[0].status).toBe('DELIVERED');
+    expect(txs[1].status).toBe('DUPLICATE');
+  });
+
+  it('should mark transaction FAILED on parse error', async () => {
+    const queue = createMockQueue();
+
+    const result = await processInboundJob(
+      { rawEdi: 'NOT_EDI_AT_ALL', tradingPartnerId, orgId },
+      { prisma: getDb(), queues: { ack997: queue } },
+    );
+
+    expect(result.success).toBe(false);
+
+    const tx = await getDb().transaction.findFirst();
+    expect(tx?.status).toBe('FAILED');
+    expect(tx?.errorMessage).toBeTruthy();
+  });
+
+  it('should mark transaction FAILED when downstream returns 500', async () => {
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 500, { error: 'Internal Server Error' });
+    server.listen();
+
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId, orgId },
+      { prisma: getDb(), queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    expect(result.success).toBe(false);
+
+    const tx = await getDb().transaction.findFirst();
+    expect(tx?.status).toBe('FAILED');
+    expect(tx?.downstreamStatusCode).toBe(500);
+  });
+
+  it('should mark transaction FAILED on downstream timeout', async () => {
+    const prisma = getDb();
+
+    await prisma.downstreamApi.updateMany({
+      where: { orgId },
+      data: { timeoutMs: 500 },
+    });
+
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, {}, 5000);
+    server.listen();
+
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId, orgId },
+      { prisma, queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    expect(result.success).toBe(false);
+
+    const tx = await prisma.transaction.findFirst();
+    expect(tx?.status).toBe('FAILED');
+    expect(tx?.errorMessage?.toLowerCase()).toContain('abort');
+
+    await prisma.downstreamApi.updateMany({
+      where: { orgId },
+      data: { timeoutMs: 3000 },
+    });
+  });
+
+  it('should pass through JEDI as outboundPayload when no active mapping exists', async () => {
+    const prisma = getDb();
+
+    await prisma.mapping.updateMany({
+      where: { orgId },
+      data: { isActive: false },
+    });
+
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, { ok: true });
+    server.listen();
+
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId, orgId },
+      { prisma, queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    expect(result.success).toBe(true);
+
+    const tx = await prisma.transaction.findFirst();
+    expect(tx?.status).toBe('DELIVERED');
+    expect(tx?.outboundPayload).toEqual(tx?.jediPayload);
+
+    await prisma.mapping.updateMany({
+      where: { orgId },
+      data: { isActive: true },
+    });
   });
 });
