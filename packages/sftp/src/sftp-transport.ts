@@ -25,4 +25,8 @@ export class SftpTransport implements FileTransport {
   async deleteFile(_remotePath: string): Promise<void> {
     throw new Error('Not implemented');
   }
+
+  async putFile(_path: string, _content: Buffer): Promise<void> {
+    throw new Error('Not implemented');
+  }
 }

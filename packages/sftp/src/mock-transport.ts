@@ -42,6 +42,10 @@ export class MockTransport implements FileTransport {
     this.files.delete(remotePath);
   }
 
+  async putFile(path: string, content: Buffer): Promise<void> {
+    this.files.set(path, content);
+  }
+
   getArchivedFiles(): Map<string, Buffer> {
     return this.archived;
   }
