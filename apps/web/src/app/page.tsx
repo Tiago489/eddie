@@ -10,20 +10,25 @@ async function fetchStats() {
   try {
     const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
     const orgId = process.env.NEXT_PUBLIC_ORG_ID ?? 'default-org';
-    const res = await fetch(`${base}/api/transactions?orgId=${orgId}&page=1&limit=10`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return res.json();
+    const [txRes, tpRes] = await Promise.all([
+      fetch(`${base}/api/transactions?orgId=${orgId}&page=1&limit=10`, { cache: 'no-store' }),
+      fetch(`${base}/api/trading-partners?orgId=${orgId}`, { cache: 'no-store' }),
+    ]);
+    const txData = txRes.ok ? await txRes.json() : null;
+    const tpData = tpRes.ok ? await tpRes.json() : null;
+    return { txData, tpData };
   } catch {
-    return null;
+    return { txData: null, tpData: null };
   }
 }
 
 export default async function DashboardPage() {
-  const data = await fetchStats();
-  const transactions = data?.data ?? [];
-  const total = data?.total ?? 0;
+  const { txData, tpData } = await fetchStats();
+  const transactions = txData?.data ?? [];
+  const total = txData?.total ?? 0;
   const delivered = transactions.filter((t: { status: string }) => t.status === 'DELIVERED').length;
   const failed = transactions.filter((t: { status: string }) => t.status === 'FAILED').length;
+  const activePartners = tpData?.data?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -63,7 +68,7 @@ export default async function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">-</div>
+            <div className="text-2xl font-bold">{activePartners}</div>
           </CardContent>
         </Card>
       </div>
