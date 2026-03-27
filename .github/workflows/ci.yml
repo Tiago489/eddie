@@ -74,7 +74,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
 
       - name: Run tests (shard ${{ matrix.shard }}/2)
-        run: pnpm test --reporter=verbose --shard=${{ matrix.shard }}/2
+        run: pnpm test -- --reporter=verbose --shard=${{ matrix.shard }}/2
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
           REDIS_URL: redis://localhost:6379
@@ -149,7 +149,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
 
       - name: Run coverage
-        run: pnpm test:coverage --reporter=verbose
+        run: pnpm test:coverage -- --reporter=verbose
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/edi_test
           REDIS_URL: redis://localhost:6379
