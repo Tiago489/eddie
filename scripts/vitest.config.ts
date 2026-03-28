@@ -13,6 +13,8 @@ export default defineConfig({
     alias: {
       '@prisma/client': resolve(__dirname, '../node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/@prisma/client'),
       jsonata: resolve(__dirname, '../node_modules/.pnpm/jsonata@2.1.0/node_modules/jsonata'),
+      'msw/node': resolve(__dirname, '../apps/worker/node_modules/msw/node'),
+      msw: resolve(__dirname, '../apps/worker/node_modules/msw'),
     },
   },
 });
