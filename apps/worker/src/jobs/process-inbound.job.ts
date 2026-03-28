@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import type { PrismaClient } from '@edi-platform/db';
 import { X12Parser } from '@edi-platform/edi-core';
-import { toJedi204, toJedi997, JsonataEvaluator, validateTmsOutput, defaultTmsSchema } from '@edi-platform/jedi';
+import { toJedi, JsonataEvaluator, validateTmsOutput, defaultTmsSchema } from '@edi-platform/jedi';
 
 export interface InboundJobPayload {
   rawEdi: string;
@@ -105,8 +105,7 @@ export async function processInboundJob(
     data: { status: 'MAPPING' },
   });
 
-  const jediResult =
-    data.transactionSetId === '997' ? toJedi997(data) : toJedi204(data);
+  const jediResult = toJedi(data);
 
   if (!jediResult.success) {
     await prisma.transaction.update({

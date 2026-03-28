@@ -4,6 +4,7 @@ import type { PrismaClient } from '@edi-platform/db';
 import { tradingPartnersRoutes } from './routes/trading-partners';
 import { sftpConnectionsRoutes } from './routes/sftp-connections';
 import { mappingsRoutes } from './routes/mappings';
+import { fixturesRoutes } from './routes/fixtures';
 import { downstreamApisRoutes } from './routes/downstream-apis';
 import { transactionsRoutes } from './routes/transactions';
 import { outboundRoutes } from './routes/outbound';
@@ -46,6 +47,7 @@ export function buildApp(opts?: AppOptions): FastifyInstance {
   app.register(tradingPartnersRoutes, { prefix: '/api/trading-partners' });
   app.register(sftpConnectionsRoutes, { prefix: '/api/sftp-connections' });
   app.register(mappingsRoutes, { prefix: '/api/mappings' });
+  app.register(fixturesRoutes, { prefix: '/api/mappings' });
   app.register(downstreamApisRoutes, { prefix: '/api/downstream-apis' });
   app.register(transactionsRoutes, { prefix: '/api/transactions' });
   app.register(outboundRoutes, { prefix: '/api/outbound' });

@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { X12Parser } from '@edi-platform/edi-core';
 import type { Segment, ParsedEnvelope } from '@edi-platform/edi-core';
 import type { MappingResult } from '@edi-platform/types';
-import { toJedi204, toJedi997 } from '../transforms/to-jedi';
+import { toJedi204, toJedi211, toJedi997, toJedi } from '../transforms/to-jedi';
 import type { JediDocument } from '../types/jedi';
 
 const fixturesDir = resolve(__dirname, '../../../../tests/fixtures');
@@ -433,5 +433,159 @@ describe('toJedi997', () => {
     // Also tests buildGsGroup fallback with gsControlNumber = null
     const group = result.output.interchanges[0].functional_groups[0];
     expect(group.GS_06_GroupControlNumber).toBe('');
+  });
+});
+
+describe('toJedi211', () => {
+  const parser = new X12Parser();
+
+  it('should parse a real 211 BOL EDI file into a JediDocument', () => {
+    const rawEdi = readFileSync(resolve(fixturesDir, 'edi/sample_211.edi'), 'utf-8');
+    const parseResult = parser.parse(rawEdi);
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+
+    const result = toJedi211(parseResult.data);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
+      heading: {
+        transaction_set_header_ST: { ST_01_TransactionSetIdentifierCode: string };
+        bill_of_lading_BOL: {
+          BOL_01_StandardCarrierAlphaCode: string;
+          BOL_02_ShipmentMethodOfPayment: string;
+          BOL_03_ShipmentIdentificationNumber: string;
+          BOL_04_Date?: string;
+          BOL_05_Time?: string;
+          BOL_06_ReferenceIdentification?: string;
+        };
+        set_purpose_B2A?: { B2A_01_TransactionSetPurposeCode: string };
+        reference_identification_L11?: Array<{ L11_01_ReferenceIdentification: string; L11_02_ReferenceIdentificationQualifier: string }>;
+        date_time_reference_G62?: Array<Record<string, string>>;
+        party_identification_loop_N1?: Array<{
+          name_N1: { N1_01_EntityIdentifierCode: string; N1_02_Name?: string };
+          contact_G61?: { G61_04_CommunicationNumber?: string };
+        }>;
+      };
+      detail: { line_items: Array<Record<string, unknown>> };
+      summary?: { transaction_set_trailer_SE: { SE_01_NumberOfIncludedSegments: string } };
+    };
+
+    // Header
+    expect(ts.heading.transaction_set_header_ST.ST_01_TransactionSetIdentifierCode).toBe('211');
+    expect(ts.heading.bill_of_lading_BOL.BOL_01_StandardCarrierAlphaCode).toBe('NWKD');
+    expect(ts.heading.bill_of_lading_BOL.BOL_02_ShipmentMethodOfPayment).toBe('CC');
+    expect(ts.heading.bill_of_lading_BOL.BOL_03_ShipmentIdentificationNumber).toBe('BNA-472-95777450-00');
+    expect(ts.heading.bill_of_lading_BOL.BOL_04_Date).toBe('20260324');
+    expect(ts.heading.bill_of_lading_BOL.BOL_06_ReferenceIdentification).toBe('SMF');
+
+    // B2A
+    expect(ts.heading.set_purpose_B2A?.B2A_01_TransactionSetPurposeCode).toBe('04');
+
+    // L11 references
+    expect(ts.heading.reference_identification_L11?.length).toBeGreaterThanOrEqual(7);
+    const crRef = ts.heading.reference_identification_L11?.find((l) => l.L11_02_ReferenceIdentificationQualifier === 'CR');
+    expect(crRef?.L11_01_ReferenceIdentification).toBe('12345');
+
+    // N1 loops with G61 contacts
+    expect(ts.heading.party_identification_loop_N1?.length).toBe(2);
+    const shipper = ts.heading.party_identification_loop_N1?.find((n) => n.name_N1.N1_01_EntityIdentifierCode === 'SH');
+    expect(shipper?.name_N1.N1_02_Name).toBe('SHIPPER CORP');
+    expect(shipper?.contact_G61?.G61_04_CommunicationNumber).toBe('6155551234');
+
+    const consignee = ts.heading.party_identification_loop_N1?.find((n) => n.name_N1.N1_01_EntityIdentifierCode === 'CN');
+    expect(consignee?.name_N1.N1_02_Name).toBe('CONSIGNEE LLC');
+
+    // Line items
+    expect(ts.detail.line_items.length).toBe(1);
+
+    // Summary
+    expect(ts.summary?.transaction_set_trailer_SE.SE_01_NumberOfIncludedSegments).toBe('22');
+  });
+
+  it('should fail when BOL segment is missing', () => {
+    const parsed: ParsedEnvelope = {
+      isaControlNumber: '000000001',
+      gsControlNumber: '1',
+      transactionSetId: '211',
+      segments: [],
+      transactionSegments: [
+        { id: 'B2A', elements: ['B2A', '04'] },
+        { id: 'N1', elements: ['N1', 'SH', 'Shipper'] },
+      ],
+    };
+
+    const result = toJedi211(parsed);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('BOL');
+    }
+  });
+
+  it('should handle minimal 211 with only BOL segment', () => {
+    const parsed: ParsedEnvelope = {
+      isaControlNumber: '000000001',
+      gsControlNumber: '1',
+      transactionSetId: '211',
+      segments: [],
+      transactionSegments: [
+        { id: 'BOL', elements: ['BOL', 'SCAC', 'PP', 'PRO123'] },
+      ],
+    };
+
+    const result = toJedi211(parsed);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
+      heading: { bill_of_lading_BOL: { BOL_03_ShipmentIdentificationNumber: string } };
+      detail: { line_items: unknown[] };
+    };
+    expect(ts.heading.bill_of_lading_BOL.BOL_03_ShipmentIdentificationNumber).toBe('PRO123');
+    expect(ts.detail.line_items).toHaveLength(0);
+  });
+});
+
+describe('toJedi (router)', () => {
+  const parser = new X12Parser();
+
+  it('should route 204 to toJedi204', () => {
+    const edi = readFileSync(resolve(fixturesDir, 'edi/sample_204.edi'), 'utf-8');
+    const parsed = parser.parse(edi);
+    if (!parsed.success) throw new Error('Parse failed');
+
+    const result = toJedi(parsed.data);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
+      heading: { beginning_segment_for_shipper_order_B2: Record<string, unknown> };
+    };
+    expect(ts.heading.beginning_segment_for_shipper_order_B2).toBeDefined();
+  });
+
+  it('should route 211 to toJedi211', () => {
+    const edi = readFileSync(resolve(fixturesDir, 'edi/sample_211.edi'), 'utf-8');
+    const parsed = parser.parse(edi);
+    if (!parsed.success) throw new Error('Parse failed');
+
+    const result = toJedi(parsed.data);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
+      heading: { bill_of_lading_BOL: Record<string, unknown> };
+    };
+    expect(ts.heading.bill_of_lading_BOL).toBeDefined();
+  });
+
+  it('should route 997 to toJedi997', () => {
+    const edi = readFileSync(resolve(fixturesDir, 'edi/sample_997.edi'), 'utf-8');
+    const parsed = parser.parse(edi);
+    if (!parsed.success) throw new Error('Parse failed');
+
+    const result = toJedi(parsed.data);
+    expect(result.success).toBe(true);
   });
 });

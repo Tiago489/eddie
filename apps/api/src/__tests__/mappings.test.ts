@@ -60,6 +60,50 @@ describe('Mappings API', { timeout: 60000 }, () => {
     expect(body.output.id).toBe('SHIP001');
   });
 
+  it('PUT /api/mappings/:id — deactivate with isActive: false', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/mappings/${createdId}`,
+      payload: { isActive: false },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().isActive).toBe(false);
+  });
+
+  it('GET /api/mappings — default returns only active mappings', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/mappings?orgId=${orgId}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    // The createdId mapping was deactivated above, so it should not appear
+    expect(body.data.every((m: { isActive: boolean }) => m.isActive === true)).toBe(true);
+    expect(body.data.find((m: { id: string }) => m.id === createdId)).toBeUndefined();
+  });
+
+  it('GET /api/mappings?showAll=true — returns all mappings including inactive', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/mappings?orgId=${orgId}&showAll=true`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.data.find((m: { id: string }) => m.id === createdId)).toBeDefined();
+  });
+
+  it('PUT /api/mappings/:id — rename mapping', async () => {
+    // Reactivate first
+    await app.inject({ method: 'PUT', url: `/api/mappings/${createdId}`, payload: { isActive: true } });
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/mappings/${createdId}`,
+      payload: { name: '[Expeditors] 204 INBOUND' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().name).toBe('[Expeditors] 204 INBOUND');
+  });
+
   it('POST /api/mappings/:id/test — bad JSONata returns error', async () => {
     // Create a mapping with bad expression
     const bad = await getDb().mapping.create({

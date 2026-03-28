@@ -36,11 +36,16 @@ export async function mappingsRoutes(app: FastifyInstance) {
   });
 
   app.get('/', async (request, reply) => {
-    const { orgId, transactionSet } = request.query as { orgId?: string; transactionSet?: string };
+    const { orgId, transactionSet, showAll } = request.query as {
+      orgId?: string;
+      transactionSet?: string;
+      showAll?: string;
+    };
     const where: Record<string, unknown> = {};
     if (orgId) where.orgId = orgId;
     if (transactionSet) where.transactionSet = transactionSet;
-    const data = await app.prisma.mapping.findMany({ where: where as any });
+    if (showAll !== 'true') where.isActive = true;
+    const data = await app.prisma.mapping.findMany({ where: where as unknown as Record<string, never> });
     return reply.send({ data });
   });
 

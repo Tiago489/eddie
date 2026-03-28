@@ -1,6 +1,6 @@
 import { X12Parser } from '@edi-platform/edi-core';
 import { JsonataEvaluator } from '../evaluator/jsonata-evaluator';
-import { toJedi204 } from '../transforms/to-jedi';
+import { toJedi } from '../transforms/to-jedi';
 import { validateTmsOutput } from '../output-validator';
 import { defaultTmsSchema } from '../tms-schema';
 
@@ -59,7 +59,7 @@ export async function runMappingTest(fixture: MappingFixture): Promise<MappingTe
     };
   }
 
-  const jediResult = toJedi204(parseResult.data);
+  const jediResult = toJedi(parseResult.data);
   if (!jediResult.success) {
     return {
       pass: false,

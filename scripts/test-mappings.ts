@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
 import { resolve, join } from 'path';
 import { X12Parser } from '../packages/edi-core/src/index';
-import { toJedi204, JsonataEvaluator } from '../packages/jedi/src/index';
+import { toJedi, JsonataEvaluator } from '../packages/jedi/src/index';
 import { runAllMappingTests, type MappingFixture } from '../packages/jedi/src/mapping-tests/index';
 
 const FIXTURES_DIR = resolve('packages/jedi/src/mapping-tests/fixtures');
@@ -45,7 +45,7 @@ async function updateSnapshots(fixtures: MappingFixture[]): Promise<void> {
       console.error(`  [SKIP] ${fixture.name}: parse failed`);
       continue;
     }
-    const jedi = toJedi204(parseResult.data);
+    const jedi = toJedi(parseResult.data);
     if (!jedi.success) {
       console.error(`  [SKIP] ${fixture.name}: JEDI transform failed`);
       continue;

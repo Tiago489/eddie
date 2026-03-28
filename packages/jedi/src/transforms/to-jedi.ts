@@ -4,7 +4,9 @@ import type {
   JediInterchangeEnvelope,
   JediFunctionalGroup,
   Jedi204,
+  Jedi211,
   N1_Loop,
+  N1_Loop_211,
 } from '../types/jedi';
 import type { ParsedEnvelope, Segment } from '@edi-platform/edi-core';
 import { extractSegment, extractAllSegments, groupLoops } from '@edi-platform/edi-core';
@@ -226,6 +228,191 @@ export function toJedi204(parsed: ParsedEnvelope): MappingResult<JediDocument> {
     success: true,
     output: { interchanges: [envelope] },
   };
+}
+
+function buildN1LoopsWith211(segments: Segment[]): N1_Loop_211[] {
+  const loops: N1_Loop_211[] = [];
+  let i = 0;
+
+  while (i < segments.length) {
+    if (segments[i].id !== 'N1') {
+      i++;
+      continue;
+    }
+
+    const n1 = segments[i];
+    const loop: N1_Loop_211 = {
+      name_N1: {
+        N1_01_EntityIdentifierCode: n1.elements[1],
+        ...(n1.elements[2] ? { N1_02_Name: n1.elements[2] } : {}),
+        ...(n1.elements[3] ? { N1_03_IdentificationCodeQualifier: n1.elements[3] } : {}),
+        ...(n1.elements[4] ? { N1_04_IdentificationCode: n1.elements[4] } : {}),
+      },
+    };
+    i++;
+
+    if (i < segments.length && segments[i].id === 'N3') {
+      const n3 = segments[i];
+      loop.address_information_N3 = {
+        N3_01_AddressInformation: n3.elements[1],
+        ...(n3.elements[2] ? { N3_02_AddressInformation: n3.elements[2] } : {}),
+      };
+      i++;
+    }
+
+    if (i < segments.length && segments[i].id === 'N4') {
+      const n4 = segments[i];
+      loop.geographic_location_N4 = {
+        ...(n4.elements[1] ? { N4_01_CityName: n4.elements[1] } : {}),
+        ...(n4.elements[2] ? { N4_02_StateOrProvinceCode: n4.elements[2] } : {}),
+        ...(n4.elements[3] ? { N4_03_PostalCode: n4.elements[3] } : {}),
+      };
+      i++;
+    }
+
+    if (i < segments.length && segments[i].id === 'G61') {
+      const g61 = segments[i];
+      loop.contact_G61 = {
+        ...(g61.elements[1] ? { G61_01_ContactFunctionCode: g61.elements[1] } : {}),
+        ...(g61.elements[2] ? { G61_02_Name: g61.elements[2] } : {}),
+        ...(g61.elements[3] ? { G61_03_CommunicationNumberQualifier: g61.elements[3] } : {}),
+        ...(g61.elements[4] ? { G61_04_CommunicationNumber: g61.elements[4] } : {}),
+      };
+      i++;
+    }
+
+    loops.push(loop);
+  }
+
+  return loops;
+}
+
+export function toJedi211(parsed: ParsedEnvelope): MappingResult<JediDocument> {
+  const txSegs = parsed.transactionSegments;
+
+  const bol = extractSegment(txSegs, 'BOL');
+  if (!bol) {
+    return {
+      success: false,
+      error: 'Missing required BOL segment',
+    };
+  }
+
+  const stSeg = extractSegment(parsed.segments.map((s) => ({ id: s[0], elements: s })), 'ST');
+  const seSeg = extractSegment(parsed.segments.map((s) => ({ id: s[0], elements: s })), 'SE');
+
+  const b2a = extractSegment(txSegs, 'B2A');
+  const l11s = extractAllSegments(txSegs, 'L11');
+  const g62s = extractAllSegments(txSegs, 'G62');
+
+  // Collect heading N1/N3/N4/G61 segments (before first AT1/LX)
+  const firstDetailIdx = txSegs.findIndex((s) => s.id === 'AT1' || s.id === 'LX');
+  const headingSegs = firstDetailIdx === -1 ? txSegs : txSegs.slice(0, firstDetailIdx);
+  const headingN1Segs = headingSegs.filter(
+    (s) => s.id === 'N1' || s.id === 'N3' || s.id === 'N4' || s.id === 'G61',
+  );
+  const headingL11s = extractAllSegments(headingSegs, 'L11');
+  const headingG62s = extractAllSegments(headingSegs, 'G62');
+
+  const heading: Jedi211['heading'] = {
+    transaction_set_header_ST: {
+      ST_01_TransactionSetIdentifierCode: parsed.transactionSetId,
+      ST_02_TransactionSetControlNumber: stSeg?.elements[2] ?? '0001',
+    },
+    bill_of_lading_BOL: {
+      BOL_01_StandardCarrierAlphaCode: bol.elements[1],
+      BOL_02_ShipmentMethodOfPayment: bol.elements[2],
+      BOL_03_ShipmentIdentificationNumber: bol.elements[3],
+      ...(bol.elements[4] ? { BOL_04_Date: bol.elements[4] } : {}),
+      ...(bol.elements[5] ? { BOL_05_Time: bol.elements[5] } : {}),
+      ...(bol.elements[6] ? { BOL_06_ReferenceIdentification: bol.elements[6] } : {}),
+    },
+  };
+
+  if (b2a) {
+    heading.set_purpose_B2A = {
+      B2A_01_TransactionSetPurposeCode: b2a.elements[1],
+    };
+  }
+
+  if (headingL11s.length > 0) {
+    heading.reference_identification_L11 = headingL11s.map((s) => ({
+      L11_01_ReferenceIdentification: s.elements[1],
+      L11_02_ReferenceIdentificationQualifier: s.elements[2],
+    }));
+  }
+
+  if (headingG62s.length > 0) {
+    heading.date_time_reference_G62 = headingG62s.map((s) => ({
+      ...(s.elements[1] ? { G62_01_DateQualifier: s.elements[1] } : {}),
+      ...(s.elements[2] ? { G62_02_Date: s.elements[2] } : {}),
+    }));
+  }
+
+  const n1Loops = buildN1LoopsWith211(headingN1Segs);
+  if (n1Loops.length > 0) {
+    heading.party_identification_loop_N1 = n1Loops;
+  }
+
+  // Build line items from AT1/AT2/AT3 segments
+  const detailSegs = firstDetailIdx === -1 ? [] : txSegs.slice(firstDetailIdx);
+  const lineItems: Jedi211['detail']['line_items'] = [];
+
+  let currentItem: Jedi211['detail']['line_items'][number] | null = null;
+
+  for (const seg of detailSegs) {
+    if (seg.id === 'AT1' || seg.id === 'LX') {
+      if (currentItem) lineItems.push(currentItem);
+      currentItem = {};
+      if (seg.id === 'AT1') {
+        currentItem.assigned_number_LX = { LX_01_AssignedNumber: seg.elements[1] };
+      } else {
+        currentItem.assigned_number_LX = { LX_01_AssignedNumber: seg.elements[1] };
+      }
+    } else if (seg.id === 'AT2' && currentItem) {
+      if (seg.elements[1]) currentItem.description = seg.elements[1];
+      if (seg.elements[2]) currentItem.weight = seg.elements[2];
+      if (seg.elements[3]) currentItem.weight_qualifier = seg.elements[3];
+      if (seg.elements[4]) currentItem.pieces = seg.elements[4];
+      if (seg.elements[5]) currentItem.packaging_code = seg.elements[5];
+    } else if (seg.id === 'AT3' && currentItem) {
+      // AT3 contains charges — skip for now but we preserve the item
+    }
+  }
+  if (currentItem) lineItems.push(currentItem);
+
+  const ts211: Jedi211 = {
+    heading,
+    detail: { line_items: lineItems },
+  };
+
+  if (seSeg) {
+    ts211.summary = {
+      transaction_set_trailer_SE: {
+        SE_01_NumberOfIncludedSegments: seSeg.elements[1],
+        SE_02_TransactionSetControlNumber: seSeg.elements[2],
+      },
+    };
+  }
+
+  const envelope = buildIsaEnvelope(parsed);
+  const group = buildGsGroup(parsed);
+  group.transaction_sets.push(ts211);
+  envelope.functional_groups.push(group);
+
+  return {
+    success: true,
+    output: { interchanges: [envelope] },
+  };
+}
+
+export function toJedi(parsed: ParsedEnvelope): MappingResult<JediDocument> {
+  switch (parsed.transactionSetId) {
+    case '204': return toJedi204(parsed);
+    case '211': return toJedi211(parsed);
+    case '997': return toJedi997(parsed);
+    default: return toJedi204(parsed); // fallback for unknown sets
+  }
 }
 
 export function toJedi997(parsed: ParsedEnvelope): MappingResult<JediDocument> {

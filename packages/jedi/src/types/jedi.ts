@@ -70,6 +70,54 @@ export interface Jedi204 {
   };
 }
 
+// Jedi211 — Motor Carrier Bill of Lading
+
+export interface G61_Contact {
+  G61_01_ContactFunctionCode?: string;
+  G61_02_Name?: string;
+  G61_03_CommunicationNumberQualifier?: string;
+  G61_04_CommunicationNumber?: string;
+}
+
+export interface N1_Loop_211 extends N1_Loop {
+  contact_G61?: G61_Contact;
+}
+
+export interface Jedi211 {
+  heading: {
+    transaction_set_header_ST: ST_Header;
+    bill_of_lading_BOL: {
+      BOL_01_StandardCarrierAlphaCode: string;
+      BOL_02_ShipmentMethodOfPayment: string;
+      BOL_03_ShipmentIdentificationNumber: string;
+      BOL_04_Date?: string;
+      BOL_05_Time?: string;
+      BOL_06_ReferenceIdentification?: string;
+    };
+    set_purpose_B2A?: {
+      B2A_01_TransactionSetPurposeCode: string;
+    };
+    reference_identification_L11?: L11_Reference[];
+    date_time_reference_G62?: G62_DateTime[];
+    party_identification_loop_N1?: N1_Loop_211[];
+  };
+  detail: {
+    line_items: Array<{
+      assigned_number_LX?: {
+        LX_01_AssignedNumber: string;
+      };
+      description?: string;
+      weight?: string;
+      weight_qualifier?: string;
+      pieces?: string;
+      packaging_code?: string;
+    }>;
+  };
+  summary?: {
+    transaction_set_trailer_SE: SE_Trailer;
+  };
+}
+
 // Jedi997 — Functional Acknowledgment
 
 export interface Jedi997 {
@@ -107,7 +155,7 @@ export interface JediFunctionalGroup {
   GS_04_Date?: string;
   GS_05_Time?: string;
   GS_06_GroupControlNumber: string;
-  transaction_sets: Array<Jedi204 | Jedi997>;
+  transaction_sets: Array<Jedi204 | Jedi211 | Jedi997>;
 }
 
 export interface JediInterchangeEnvelope {

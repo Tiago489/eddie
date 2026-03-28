@@ -31,6 +31,7 @@ export interface Mapping {
   transactionSet: string;
   direction: 'INBOUND' | 'OUTBOUND';
   jsonataExpression: string;
+  guideId: string | null;
   version: number;
   isActive: boolean;
   createdAt: string;
@@ -79,6 +80,23 @@ export interface TransactionParams {
   limit: string;
   status?: string;
   tradingPartnerId?: string;
+}
+
+export interface FixtureInfo {
+  name: string;
+  inputEdiPreview: string;
+  lastTestedAt: string;
+  lastTestPassed: boolean;
+}
+
+export interface FixtureUploadResult {
+  success: boolean;
+  fixture?: string;
+  testResult?: { pass: boolean; durationMs?: number; errors?: string[] };
+  warnings?: string[];
+  error?: string;
+  code?: string;
+  expression?: string;
 }
 
 export interface TransactionPage {

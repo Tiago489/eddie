@@ -1,6 +1,7 @@
 import type {
   TradingPartner, SftpConnection, Mapping, MappingTestResult,
   DownstreamApi, Transaction, TransactionParams, TransactionPage,
+  FixtureInfo, FixtureUploadResult,
 } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -39,12 +40,30 @@ export const api = {
   deleteSftpConnection: (id: string) =>
     apiFetch(`/api/sftp-connections/${id}`, { method: 'DELETE' }),
 
-  getMappings: (orgId: string) =>
-    apiFetch<{ data: Mapping[] }>(`/api/mappings?orgId=${orgId}`),
+  getMappings: (orgId: string, showAll = false) =>
+    apiFetch<{ data: Mapping[] }>(`/api/mappings?orgId=${orgId}${showAll ? '&showAll=true' : ''}`),
+  getMapping: (id: string) =>
+    apiFetch<Mapping>(`/api/mappings/${id}`),
   createMapping: (body: unknown) =>
     apiFetch<Mapping>('/api/mappings', { method: 'POST', body: JSON.stringify(body) }),
+  updateMapping: (id: string, body: Partial<Pick<Mapping, 'name' | 'isActive'>>) =>
+    apiFetch<Mapping>(`/api/mappings/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   testMapping: (id: string, input: unknown) =>
     apiFetch<MappingTestResult>(`/api/mappings/${id}/test`, { method: 'POST', body: JSON.stringify({ input }) }),
+
+  getFixtures: (mappingId: string) =>
+    apiFetch<{ fixtures: FixtureInfo[] }>(`/api/mappings/${mappingId}/fixtures`),
+  uploadFixture: async (mappingId: string, file: File): Promise<FixtureUploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(BASE + `/api/mappings/${mappingId}/fixtures`, {
+      method: 'POST',
+      body: formData,
+    });
+    return res.json();
+  },
+  deleteFixture: (mappingId: string, fixtureName: string) =>
+    apiFetch<{ success: boolean }>(`/api/mappings/${mappingId}/fixtures/${fixtureName}`, { method: 'DELETE' }),
 
   getDownstreamApis: (orgId: string) =>
     apiFetch<{ data: DownstreamApi[] }>(`/api/downstream-apis?orgId=${orgId}`),
