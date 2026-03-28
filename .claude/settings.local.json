@@ -67,7 +67,13 @@
       "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings?page_size=100\")",
       "Bash(timeout 120 tsx scripts/stedi-import.ts --resource=mappings)",
       "Bash(pnpm --filter @edi-platform/api add @fastify/cors)",
-      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings/01JSCJRTBF3A3A45XJAV8FCXXJ\")"
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings/01JSCJRTBF3A3A45XJAV8FCXXJ\")",
+      "Bash(mkdir -p expeditors-204-inbound/sample-204)",
+      "Bash(mv expeditors-204-inbound/input.edi expeditors-204-inbound/sample-204/)",
+      "Bash(mv expeditors-204-inbound/expected-output.json expeditors-204-inbound/sample-204/)",
+      "Bash(mv expeditors-204-inbound/mapping.jsonata expeditors-204-inbound/sample-204/)",
+      "Bash(pnpm vitest:*)",
+      "Bash(timeout 10 tsx scripts/test-mappings.ts)"
     ]
   },
   "hooks": {

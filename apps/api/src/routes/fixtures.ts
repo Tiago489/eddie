@@ -23,6 +23,15 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, '');        // trim dashes
 }
 
+async function dirExists(dirPath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(dirPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 interface FixtureInfo {
   name: string;
   inputEdiPreview: string;
@@ -96,9 +105,20 @@ export async function fixturesRoutes(app: FastifyInstance) {
       warnings.push(...validation.errors);
     }
 
-    // Step 4: Save fixture
-    const fixtureSlug = slugify(mapping.name);
-    const fixtureDir = path.join(FIXTURES_DIR, fixtureSlug);
+    // Step 4: Save fixture — nested structure: {mappingSlug}/{fixtureName}/
+    const mappingSlug = slugify(mapping.name);
+    let fixtureName = slugify(file.filename.replace(/\.edi$/i, ''));
+    if (!fixtureName) fixtureName = 'fixture';
+
+    const mappingDir = path.join(FIXTURES_DIR, mappingSlug);
+    let fixtureDir = path.join(mappingDir, fixtureName);
+
+    // Avoid overwriting: append timestamp if fixture already exists
+    if (await dirExists(fixtureDir)) {
+      fixtureName = `${fixtureName}-${Date.now()}`;
+      fixtureDir = path.join(mappingDir, fixtureName);
+    }
+
     await fs.mkdir(fixtureDir, { recursive: true });
 
     await Promise.all([
@@ -112,7 +132,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
 
     // Step 5: Run the test to confirm it passes
     const fixture: MappingFixture = {
-      name: fixtureSlug,
+      name: fixtureName,
       carrier: mapping.name.match(/\[([^\]]+)\]/)?.[1] ?? 'Unknown',
       inputEdi: ediContent,
       expectedOutput: mapResult.output,
@@ -123,7 +143,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
 
     return reply.send({
       success: true,
-      fixture: fixtureSlug,
+      fixture: fixtureName,
       testResult: testResult.pass
         ? { pass: true, durationMs: testResult.durationMs }
         : { pass: false, errors: testResult.errors },
@@ -138,75 +158,63 @@ export async function fixturesRoutes(app: FastifyInstance) {
     const mapping = await app.prisma.mapping.findUnique({ where: { id } });
     if (!mapping) return reply.status(404).send({ error: 'Mapping not found' });
 
-    const fixtureSlug = slugify(mapping.name);
+    const mappingSlug = slugify(mapping.name);
+    const mappingDir = path.join(FIXTURES_DIR, mappingSlug);
 
-    try {
-      const entries = await fs.readdir(FIXTURES_DIR);
-      const fixtures: FixtureInfo[] = [];
-
-      for (const entry of entries) {
-        // Match fixtures for this mapping by slug prefix
-        if (!entry.startsWith(fixtureSlug.split('-')[0])) {
-          // Broader match: check if this fixture's mapping.jsonata matches
-          const jsonataPath = path.join(FIXTURES_DIR, entry, 'mapping.jsonata');
-          try {
-            const expr = await fs.readFile(jsonataPath, 'utf-8');
-            if (expr !== mapping.jsonataExpression) continue;
-          } catch {
-            continue;
-          }
-        }
-
-        const fixtureDir = path.join(FIXTURES_DIR, entry);
-        const stat = await fs.stat(fixtureDir);
-        if (!stat.isDirectory()) continue;
-
-        try {
-          const ediContent = await fs.readFile(path.join(fixtureDir, 'input.edi'), 'utf-8');
-          const expectedOutput = JSON.parse(
-            await fs.readFile(path.join(fixtureDir, 'expected-output.json'), 'utf-8'),
-          );
-          const jsonataExpression = await fs.readFile(path.join(fixtureDir, 'mapping.jsonata'), 'utf-8');
-
-          const fixture: MappingFixture = {
-            name: entry,
-            carrier: mapping.name.match(/\[([^\]]+)\]/)?.[1] ?? 'Unknown',
-            inputEdi: ediContent,
-            expectedOutput,
-            jsonataExpression,
-          };
-
-          const testResult = await runMappingTest(fixture);
-
-          fixtures.push({
-            name: entry,
-            inputEdiPreview: ediContent.substring(0, 100),
-            lastTestedAt: new Date().toISOString(),
-            lastTestPassed: testResult.pass,
-          });
-        } catch {
-          // Skip fixtures with missing files
-        }
-      }
-
-      return reply.send({ fixtures });
-    } catch {
+    if (!(await dirExists(mappingDir))) {
       return reply.send({ fixtures: [] });
     }
+
+    const fixtures: FixtureInfo[] = [];
+    const entries = await fs.readdir(mappingDir);
+
+    for (const entry of entries) {
+      const fixtureDir = path.join(mappingDir, entry);
+      const stat = await fs.stat(fixtureDir);
+      if (!stat.isDirectory()) continue;
+
+      try {
+        const ediContent = await fs.readFile(path.join(fixtureDir, 'input.edi'), 'utf-8');
+        const expectedOutput = JSON.parse(
+          await fs.readFile(path.join(fixtureDir, 'expected-output.json'), 'utf-8'),
+        );
+        const jsonataExpression = await fs.readFile(path.join(fixtureDir, 'mapping.jsonata'), 'utf-8');
+
+        const fixtureData: MappingFixture = {
+          name: entry,
+          carrier: mapping.name.match(/\[([^\]]+)\]/)?.[1] ?? 'Unknown',
+          inputEdi: ediContent,
+          expectedOutput,
+          jsonataExpression,
+        };
+
+        const testResult = await runMappingTest(fixtureData);
+
+        fixtures.push({
+          name: entry,
+          inputEdiPreview: ediContent.substring(0, 100),
+          lastTestedAt: new Date().toISOString(),
+          lastTestPassed: testResult.pass,
+        });
+      } catch {
+        // Skip fixtures with missing files
+      }
+    }
+
+    return reply.send({ fixtures });
   });
 
-  // DELETE /api/mappings/:id/fixtures/:fixtureName — remove fixture
+  // DELETE /api/mappings/:id/fixtures/:fixtureName — remove fixture subdirectory
   app.delete('/:id/fixtures/:fixtureName', async (request, reply) => {
     const { id, fixtureName } = request.params as { id: string; fixtureName: string };
 
     const mapping = await app.prisma.mapping.findUnique({ where: { id } });
     if (!mapping) return reply.status(404).send({ error: 'Mapping not found' });
 
-    const fixtureDir = path.join(FIXTURES_DIR, fixtureName);
+    const mappingSlug = slugify(mapping.name);
+    const fixtureDir = path.join(FIXTURES_DIR, mappingSlug, fixtureName);
 
-    try {
-      await fs.access(fixtureDir);
-    } catch {
+    if (!(await dirExists(fixtureDir))) {
       return reply.status(404).send({ error: 'Fixture not found' });
     }
 

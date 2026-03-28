@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { resolve, join } from 'path';
 import { X12Parser } from '../packages/edi-core/src/index';
 import { toJedi, JsonataEvaluator } from '../packages/jedi/src/index';
@@ -6,30 +6,57 @@ import { runAllMappingTests, type MappingFixture } from '../packages/jedi/src/ma
 
 const FIXTURES_DIR = resolve('packages/jedi/src/mapping-tests/fixtures');
 
+function isFixtureDir(dir: string): boolean {
+  return existsSync(join(dir, 'input.edi'))
+    && existsSync(join(dir, 'expected-output.json'))
+    && existsSync(join(dir, 'mapping.jsonata'));
+}
+
 function loadFixtures(carrierFilter?: string): MappingFixture[] {
   const fixtures: MappingFixture[] = [];
-  const dirs = readdirSync(FIXTURES_DIR).filter((d) =>
+
+  // Walk: fixtures/{mappingSlug}/{fixtureName}/ (nested) or fixtures/{name}/ (legacy flat)
+  const topDirs = readdirSync(FIXTURES_DIR).filter((d) =>
     statSync(join(FIXTURES_DIR, d)).isDirectory(),
   );
 
-  for (const dir of dirs) {
-    const fixtureDir = join(FIXTURES_DIR, dir);
-    const inputEdi = readFileSync(join(fixtureDir, 'input.edi'), 'utf-8');
-    const expectedOutput = JSON.parse(readFileSync(join(fixtureDir, 'expected-output.json'), 'utf-8'));
-    const jsonataExpression = readFileSync(join(fixtureDir, 'mapping.jsonata'), 'utf-8');
+  for (const topDir of topDirs) {
+    const topPath = join(FIXTURES_DIR, topDir);
 
-    // Extract carrier from dir name: "expeditors-204-inbound" → "Expeditors"
-    const carrier = dir.split('-')[0].charAt(0).toUpperCase() + dir.split('-')[0].slice(1);
+    if (isFixtureDir(topPath)) {
+      // Legacy flat layout: fixtures/{name}/input.edi
+      const carrier = topDir.split('-')[0].charAt(0).toUpperCase() + topDir.split('-')[0].slice(1);
+      if (carrierFilter && carrier.toLowerCase() !== carrierFilter.toLowerCase()) continue;
 
-    if (carrierFilter && carrier.toLowerCase() !== carrierFilter.toLowerCase()) continue;
+      fixtures.push({
+        name: topDir,
+        carrier,
+        inputEdi: readFileSync(join(topPath, 'input.edi'), 'utf-8'),
+        expectedOutput: JSON.parse(readFileSync(join(topPath, 'expected-output.json'), 'utf-8')),
+        jsonataExpression: readFileSync(join(topPath, 'mapping.jsonata'), 'utf-8'),
+      });
+    } else {
+      // Nested layout: fixtures/{mappingSlug}/{fixtureName}/input.edi
+      const carrier = topDir.split('-')[0].charAt(0).toUpperCase() + topDir.split('-')[0].slice(1);
+      if (carrierFilter && carrier.toLowerCase() !== carrierFilter.toLowerCase()) continue;
 
-    fixtures.push({
-      name: dir,
-      carrier,
-      inputEdi,
-      expectedOutput,
-      jsonataExpression,
-    });
+      const subDirs = readdirSync(topPath).filter((d) =>
+        statSync(join(topPath, d)).isDirectory(),
+      );
+
+      for (const subDir of subDirs) {
+        const fixturePath = join(topPath, subDir);
+        if (!isFixtureDir(fixturePath)) continue;
+
+        fixtures.push({
+          name: `${topDir}/${subDir}`,
+          carrier,
+          inputEdi: readFileSync(join(fixturePath, 'input.edi'), 'utf-8'),
+          expectedOutput: JSON.parse(readFileSync(join(fixturePath, 'expected-output.json'), 'utf-8')),
+          jsonataExpression: readFileSync(join(fixturePath, 'mapping.jsonata'), 'utf-8'),
+        });
+      }
+    }
   }
 
   return fixtures;
@@ -37,7 +64,7 @@ function loadFixtures(carrierFilter?: string): MappingFixture[] {
 
 async function updateSnapshots(fixtures: MappingFixture[]): Promise<void> {
   const parser = new X12Parser();
-  const evaluator = new JsonataEvaluator();
+  const eval2 = new JsonataEvaluator();
 
   for (const fixture of fixtures) {
     const parseResult = parser.parse(fixture.inputEdi);
@@ -50,7 +77,7 @@ async function updateSnapshots(fixtures: MappingFixture[]): Promise<void> {
       console.error(`  [SKIP] ${fixture.name}: JEDI transform failed`);
       continue;
     }
-    const result = await evaluator.evaluate(fixture.jsonataExpression, jedi.output);
+    const result = await eval2.evaluate(fixture.jsonataExpression, jedi.output);
     if (!result.success) {
       console.error(`  [SKIP] ${fixture.name}: mapping failed`);
       continue;

@@ -1,0 +1,49 @@
+{
+  "senderId": "FWDA",
+  "receiverId": "JNEL",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "211",
+  "standardCarrierAlphaCode": "JNEL",
+  "order": {
+    "mawb": "95947477",
+    "secondaryRefNumber": "EVV-472-95947477-00",
+    "deadlineDate": "20260330",
+    "endStop": {
+      "specialInstructions": "175-Class 175LHS-Station SurchargeWCI-Weight Class Inspection Fee"
+    },
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "EVV-472-95947477-00"
+    }
+  },
+  "consigneeInformation": {
+    "name": "Amtrak Material Control",
+    "addressLine1": "175 Industrial Dr",
+    "city": "Groton",
+    "state": "CT",
+    "zip": "06340",
+    "country": "US",
+    "contactName": "Caleb Cahoone",
+    "contactPhone": "8602719769"
+  },
+  "shipperInformation": {
+    "name": "FORWARD AIR, INC",
+    "addressLine1": "315 ELLA GRASSO TURNPIKE",
+    "city": "WINDSOR LOCKS",
+    "state": "CT",
+    "zip": "06096",
+    "country": "US",
+    "contactName": "ADAM KROLL",
+    "contactPhone": "860-654-1733"
+  },
+  "packages": [
+    {
+      "description": "Sign Baricade",
+      "weight": 290,
+      "quantity": 1,
+      "length": 72,
+      "width": 36,
+      "height": 48,
+      "packageType": "PCS"
+    }
+  ]
+}

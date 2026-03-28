@@ -2,37 +2,42 @@
 
 Test fixtures validate that JSONata mapping expressions produce the correct TMS output for real production EDI files.
 
-## Two Ways to Add Fixtures
+## Directory Structure
 
-### 1. UI Upload (recommended)
-Navigate to **Mappings > [mapping] > Test Fixtures** in the Eddie web UI. Drag and drop an `.edi` file — the system will:
-1. Parse the EDI through x12Parser
-2. Evaluate the mapping's JSONata expression
-3. Validate output against the TMS schema
-4. Save the fixture with auto-generated expected output
-
-### 2. Codebase Drop
-Create a directory in `packages/jedi/src/mapping-tests/fixtures/` with these files:
+Each mapping has its own directory, with subdirectories for individual fixtures:
 
 ```
 fixtures/
-  expeditors-204-inbound/
-    input.edi              # Raw X12 EDI file
-    expected-output.json   # Expected TMS JSON output
-    mapping.jsonata        # JSONata mapping expression
+  expeditors-204-inbound/          ← mapping slug
+    shipment-001/                   ← fixture name (from uploaded filename)
+      input.edi                     ← raw X12 EDI file
+      expected-output.json          ← expected TMS JSON output
+      mapping.jsonata               ← JSONata mapping expression snapshot
+    shipment-002/
+      input.edi
+      expected-output.json
+      mapping.jsonata
+  dhl-214-outbound/
+    invoice-batch-march/
+      input.edi
+      expected-output.json
+      mapping.jsonata
 ```
 
-All three files are required.
+All three files are required per fixture.
 
-## Naming Convention
+## Two Ways to Add Fixtures
 
-Fixture directories follow: `{carrier-slug}-{transactionSet}-{direction}`
+### 1. UI Upload (recommended)
+Navigate to **Mappings > [mapping] > Test Fixtures** in the Eddie web UI. Drag and drop `.edi` files — each creates a new fixture subdirectory. Uploading a file with the same name as an existing fixture appends a timestamp to avoid overwriting.
 
-Examples:
-- `expeditors-204-inbound`
-- `dhl-214-outbound`
-- `forward-air-211-inbound`
-- `arcbest-210-outbound`
+### 2. Codebase Drop
+Create a directory in `fixtures/{mapping-slug}/{fixture-name}/` with all three files.
+
+## Naming Conventions
+
+- **Mapping slug**: `{carrier-slug}-{transactionSet}-{direction}` e.g. `expeditors-204-inbound`, `dhl-214-outbound`
+- **Fixture name**: derived from uploaded filename (slugified), or any descriptive name e.g. `shipment-001`, `missing-consignee-edge-case`
 
 ## Running Tests
 
@@ -51,7 +56,7 @@ pnpm test:mappings --update
 
 Each test fixture runs through this pipeline:
 1. **Parse**: `input.edi` → x12Parser → ParsedEnvelope
-2. **Transform**: ParsedEnvelope → toJedi204() → JediDocument
+2. **Transform**: ParsedEnvelope → toJedi() → JediDocument (auto-routes by transaction set)
 3. **Map**: JediDocument + `mapping.jsonata` → JsonataEvaluator → TMS output
 4. **Compare**: TMS output vs `expected-output.json` (deep equality)
 5. **Validate**: TMS output vs defaultTmsSchema (required fields check)

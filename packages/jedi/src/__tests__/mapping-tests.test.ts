@@ -134,9 +134,9 @@ describe('mapping-tests runner', () => {
   });
 
   it('should load and pass the real expeditors-204-inbound fixture', async () => {
-    const fixtureDir = resolve(__dirname, '../mapping-tests/fixtures/expeditors-204-inbound');
+    const fixtureDir = resolve(__dirname, '../mapping-tests/fixtures/expeditors-204-inbound/sample-204');
     const fixture: MappingFixture = {
-      name: 'expeditors-204-inbound',
+      name: 'expeditors-204-inbound/sample-204',
       carrier: 'Expeditors',
       inputEdi: readFileSync(resolve(fixtureDir, 'input.edi'), 'utf-8'),
       expectedOutput: JSON.parse(readFileSync(resolve(fixtureDir, 'expected-output.json'), 'utf-8')),
