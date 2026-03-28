@@ -73,7 +73,9 @@
       "Bash(mv expeditors-204-inbound/expected-output.json expeditors-204-inbound/sample-204/)",
       "Bash(mv expeditors-204-inbound/mapping.jsonata expeditors-204-inbound/sample-204/)",
       "Bash(pnpm vitest:*)",
-      "Bash(timeout 10 tsx scripts/test-mappings.ts)"
+      "Bash(timeout 10 tsx scripts/test-mappings.ts)",
+      "Bash(find packages/jedi/src/mapping-tests/fixtures -type d -name *srwj* -o -type d -name *211*)",
+      "Bash(find . -name *srwj* -o -name *SRWJ*)"
     ]
   },
   "hooks": {

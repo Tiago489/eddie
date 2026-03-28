@@ -1,0 +1,97 @@
+{
+  "senderId": "FWDA",
+  "receiverId": "SRWJ",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "211",
+  "transactionSetPurposeCode": "CHANGE",
+  "standardCarrierAlphaCode": "SRWJ",
+  "order": {
+    "mawb": "89778277",
+    "secondaryRefNumber": "IAH-472-89778277-00",
+    "deadlineDate": "2024-08-01",
+    "paymentMethod": "COLLECT",
+    "pickupOrDelivery": "DELIVERY",
+    "endStop": {
+      "specialInstructions": "SCAN GL MUST BE ADVISED OF ANY DAMAGES OF THE BELOW NUMBER"
+    },
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "IAH-472-89778277-00"
+    }
+  },
+  "consigneeInformation": {
+    "name": "CARNIVAL VALOR C/O SURE LOGIST",
+    "addressLine1": "200 CFROFTON ROAD",
+    "addressLine2": "BUILDING 7 STE 375",
+    "city": "KENNER",
+    "state": "LA",
+    "zip": "70062",
+    "country": "US"
+  },
+  "shipperInformation": {
+    "name": "FORWARD AIR, INC",
+    "addressLine1": "MOISANT INDUSTRIAL WHSE,BOX 33",
+    "addressLine2": "200 CROFTON RD BLDG 7-A,STE500",
+    "city": "KENNER",
+    "state": "LA",
+    "zip": "70062",
+    "country": "US",
+    "contactName": "VANN DASSING",
+    "contactPhone": "504-467-1776"
+  },
+  "packages": [
+    {
+      "description": "TOOLBOX",
+      "weight": 823.5,
+      "quantity": 1,
+      "length": 48,
+      "width": 35,
+      "height": 30,
+      "packageType": "PCS"
+    },
+    {
+      "description": "TOOLBOX",
+      "weight": 823.5,
+      "quantity": 1,
+      "length": 48,
+      "width": 40,
+      "height": 31,
+      "packageType": "PCS"
+    },
+    {
+      "description": "TOOLBOX",
+      "weight": 823.5,
+      "quantity": 1,
+      "length": 45,
+      "width": 36,
+      "height": 52,
+      "packageType": "PCS"
+    },
+    {
+      "description": "TOOLBOX",
+      "weight": 823.5,
+      "quantity": 1,
+      "length": 100,
+      "width": 31,
+      "height": 58,
+      "packageType": "PCS"
+    },
+    {
+      "description": "TOOLBOX",
+      "weight": 823.5,
+      "quantity": 1,
+      "length": 49,
+      "width": 26,
+      "height": 36,
+      "packageType": "PCS"
+    },
+    {
+      "description": "TOOLBOX",
+      "weight": 823.5,
+      "quantity": 1,
+      "length": 88,
+      "width": 26,
+      "height": 46,
+      "packageType": "PCS"
+    }
+  ]
+}

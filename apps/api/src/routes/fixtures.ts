@@ -3,6 +3,7 @@ import { X12Parser } from '@edi-platform/edi-core';
 import {
   toJedi, JsonataEvaluator, validateTmsOutput, defaultTmsSchema,
   runMappingTest, type MappingFixture,
+  learnFromFixture, addEntries,
 } from '@edi-platform/jedi';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -164,7 +165,22 @@ export async function fixturesRoutes(app: FastifyInstance) {
       fs.writeFile(path.join(fixtureDir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n'),
     ]);
 
-    // Compare mapping output against expected (skips re-parsing since we already have the output)
+    // Learn new lookup values from Stedi ground truth
+    let learnedCount = 0;
+    if (source === 'stedi' && typeof mapResult.output === 'object' && mapResult.output !== null) {
+      const learned = learnFromFixture(
+        mapResult.output as Record<string, unknown>,
+        expectedOutput as Record<string, unknown>,
+      );
+      if (learned.length > 0) {
+        addEntries(learned);
+        learnedCount = learned.length;
+        for (const { table, entry } of learned) {
+          warnings.push(`Learned lookup: ${table} "${entry.Key}" → "${entry.Value}"`);
+        }
+      }
+    }
+
     const outputMatches = JSON.stringify(mapResult.output) === JSON.stringify(expectedOutput);
     const testPass = outputMatches && validation.valid;
 
@@ -172,6 +188,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
       success: true,
       fixture: fixtureName,
       source,
+      learnedEntries: learnedCount,
       testResult: testPass
         ? { pass: true, durationMs: 0 }
         : { pass: false, errors: outputMatches ? validation.errors : ['Output does not match expected'] },

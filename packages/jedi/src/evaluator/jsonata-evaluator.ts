@@ -1,7 +1,7 @@
 import jsonata, { type Expression } from 'jsonata';
 import type { MappingResult } from '@edi-platform/types';
+import { getDefaultTables, type LookupTableSet } from './stedi-lookup-tables';
 
-// Stedi-compat: $lookupTable(table, keyColumn, keyValue) → row or undefined
 function lookupTable(
   table: Array<Record<string, unknown>> | undefined,
   keyColumn: string,
@@ -11,7 +11,6 @@ function lookupTable(
   return table.find((row) => row[keyColumn] === keyValue);
 }
 
-// Sentinel values Stedi mappings use for conditional omission
 const OMIT_FIELD = Symbol.for('stedi_omit_field');
 const OMIT_ARRAY_ITEM = Symbol.for('stedi_omit_array_item');
 
@@ -32,11 +31,15 @@ export class JsonataEvaluator {
     this.bindings[name] = value;
   }
 
-  async evaluate<T>(expression: string, input: unknown, timeoutMs = 5000): Promise<MappingResult<T>> {
+  async evaluate<T>(
+    expression: string,
+    input: unknown,
+    timeoutMs = 5000,
+    tables?: LookupTableSet,
+  ): Promise<MappingResult<T>> {
     try {
       const expr: Expression = jsonata(expression);
 
-      // Register Stedi-compat functions
       expr.registerFunction('lookupTable', lookupTable);
       expr.registerFunction('trim', (s: unknown) => typeof s === 'string' ? s.trim() : s);
       expr.registerFunction('omitField', () => OMIT_FIELD);
@@ -45,9 +48,8 @@ export class JsonataEvaluator {
         expr.registerFunction(name, fn, signature);
       }
 
-      // Build bindings with Stedi-compat defaults
       const evalBindings: Record<string, unknown> = {
-        tables: {},         // Empty lookup tables — mappings degrade gracefully
+        tables: tables ?? getDefaultTables(),
         omitField: OMIT_FIELD,
         omitArrayItem: OMIT_ARRAY_ITEM,
         ...this.bindings,

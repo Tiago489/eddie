@@ -12,6 +12,14 @@ import type {
 import type { ParsedEnvelope, Segment } from '@edi-platform/edi-core';
 import { extractSegment, extractAllSegments, groupLoops } from '@edi-platform/edi-core';
 
+// Stedi guide outputs dates as YYYY-MM-DD; raw X12 uses YYYYMMDD
+function formatDate(raw: string): string {
+  if (raw.length === 8 && /^\d{8}$/.test(raw)) {
+    return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  }
+  return raw;
+}
+
 function buildN1Loops(segments: Segment[]): N1_Loop[] {
   const loops: N1_Loop[] = [];
   let i = 0;
@@ -372,7 +380,7 @@ export function toJedi211(parsed: ParsedEnvelope): MappingResult<JediDocument> {
   if (headingG62s.length > 0) {
     heading.date_time_G62 = headingG62s.map((s) => ({
       ...(s.elements[1] ? { date_qualifier_01: s.elements[1] } : {}),
-      ...(s.elements[2] ? { date_02: s.elements[2] } : {}),
+      ...(s.elements[2] ? { date_02: formatDate(s.elements[2]) } : {}),
     }));
   }
 

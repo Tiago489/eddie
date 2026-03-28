@@ -30,7 +30,7 @@ export default function FixturesPage() {
     try {
       const result = await api.uploadFixture(id, files);
       setUploadResult(result);
-      if (result.success) mutate();
+      if (result.success) await mutate();
     } catch (err) {
       setUploadResult({
         success: false,
@@ -84,7 +84,7 @@ export default function FixturesPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".edi,.json"
+          accept=".edi,.json,application/json"
           multiple
           onChange={handleFileSelect}
           className="hidden"
@@ -95,12 +95,13 @@ export default function FixturesPage() {
             <p className="text-sm text-muted-foreground">Processing files...</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-3">
             <Upload className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-medium">Drop files here or click to upload</p>
-            <p className="text-xs text-muted-foreground">
-              Single .edi file (auto-generates expected output) or paired .edi + .json (Stedi ground truth)
-            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p><span className="font-medium text-foreground/70">Single file:</span> drop one .edi file — auto-generates expected output</p>
+              <p><span className="font-medium text-foreground/70">Paired files:</span> drop .edi + .json with matching names (e.g. NWKD_211.edi + NWKD_211.json) — uses JSON as Stedi ground truth</p>
+            </div>
           </div>
         )}
       </div>

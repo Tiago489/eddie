@@ -69,9 +69,14 @@ interface StediMappingSummary {
   updated_at: string;
 }
 
+interface StediLookupTable {
+  name: string;
+  values: Array<{ Key: string; Value: string }>;
+}
+
 interface StediMappingDetail extends StediMappingSummary {
   mapping: string; // JSONata expression
-  lookup_tables?: Record<string, unknown>;
+  lookup_tables?: StediLookupTable[];
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +107,7 @@ interface MappingPlan {
   direction: MappingDirection;
   jsonataExpression: string;
   guideId: string | null;
+  lookupTables: StediLookupTable[];
 }
 
 interface ImportPlan {
@@ -416,6 +422,7 @@ async function buildImportPlan(
             direction: dir,
             jsonataExpression: detail.mapping,
             guideId,
+            lookupTables: detail.lookup_tables ?? [],
           });
         }
       } catch (err) {
