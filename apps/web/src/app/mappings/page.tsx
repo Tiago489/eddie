@@ -119,11 +119,9 @@ export default function MappingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-semibold">
-            Mappings{!isLoading && ` (${activeCount} active)`}
-          </h2>
-        </div>
+        <h2 className="text-2xl font-semibold">
+          Mappings{!isLoading && ` (${activeCount} active)`}
+        </h2>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <Switch checked={showInactive} onCheckedChange={setShowInactive} />

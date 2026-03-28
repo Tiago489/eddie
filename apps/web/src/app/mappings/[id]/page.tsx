@@ -29,7 +29,6 @@ export default function MappingDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/mappings">
@@ -51,7 +50,6 @@ export default function MappingDetailPage() {
         </Link>
       </div>
 
-      {/* Tabs */}
       <div className="border-b">
         <div className="flex gap-4">
           <button
@@ -77,7 +75,6 @@ export default function MappingDetailPage() {
         </div>
       </div>
 
-      {/* Tab content */}
       {activeTab === 'details' ? (
         <div className="grid grid-cols-2 gap-6">
           <Card>

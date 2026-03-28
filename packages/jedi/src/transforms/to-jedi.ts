@@ -321,8 +321,9 @@ export function toJedi211(parsed: ParsedEnvelope): MappingResult<JediDocument> {
     return { success: false, error: 'Missing required BOL segment' };
   }
 
-  const stSeg = extractSegment(parsed.segments.map((s) => ({ id: s[0], elements: s })), 'ST');
-  const seSeg = extractSegment(parsed.segments.map((s) => ({ id: s[0], elements: s })), 'SE');
+  const envelopeSegs = parsed.segments.map((s) => ({ id: s[0], elements: s }));
+  const stSeg = extractSegment(envelopeSegs, 'ST');
+  const seSeg = extractSegment(envelopeSegs, 'SE');
   const isaSeg = parsed.segments.find((s) => s[0] === 'ISA');
 
   const b2a = extractSegment(txSegs, 'B2A');

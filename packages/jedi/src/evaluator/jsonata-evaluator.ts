@@ -55,14 +55,16 @@ export class JsonataEvaluator {
 
       const evaluationPromise = Promise.resolve(expr.evaluate(input, evalBindings)) as Promise<T>;
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
+      let timerId: ReturnType<typeof setTimeout>;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timerId = setTimeout(
           () => reject(new Error(`Mapping timed out after ${timeoutMs}ms`)),
           timeoutMs,
-        ),
-      );
+        );
+      });
 
       const result = await Promise.race([evaluationPromise, timeoutPromise]);
+      clearTimeout(timerId!);
 
       return {
         success: true,
