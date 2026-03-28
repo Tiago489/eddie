@@ -14,7 +14,9 @@
     "setup": "docker compose up -d && pnpm install && pnpm --filter @edi-platform/db db:migrate && pnpm db:seed",
     "validate:maps": "node node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs scripts/validate-maps.ts",
     "import:stedi": "tsx scripts/stedi-import.ts",
-    "import:stedi:execute": "tsx scripts/stedi-import.ts --execute"
+    "import:stedi:execute": "tsx scripts/stedi-import.ts --execute",
+    "test:mappings": "tsx scripts/test-mappings.ts",
+    "test:mappings:update": "tsx scripts/test-mappings.ts --update"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "^11.13.0",

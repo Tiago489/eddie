@@ -1,0 +1,19 @@
+{
+  "referenceNumber": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_04_ShipmentIdentificationNumber,
+  "carrier": {
+    "scac": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_02_StandardCarrierAlphaCode
+  },
+  "paymentMethod": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_06_ShipmentMethodOfPayment,
+  "stops": interchanges[0].functional_groups[0].transaction_sets[0].detail.stop_off_details_loop_S5.{
+    "sequence": stop_off_details_S5.S5_01_StopSequenceNumber,
+    "reasonCode": stop_off_details_S5.S5_02_StopReasonCode,
+    "location": {
+      "name": party_identification_loop_N1[0].name_N1.N1_02_Name,
+      "address": party_identification_loop_N1[0].address_information_N3.N3_01_AddressInformation,
+      "city": party_identification_loop_N1[0].geographic_location_N4.N4_01_CityName,
+      "state": party_identification_loop_N1[0].geographic_location_N4.N4_02_StateOrProvinceCode,
+      "zip": party_identification_loop_N1[0].geographic_location_N4.N4_03_PostalCode
+    },
+    "date": date_time_reference_G62[0].G62_02_Date
+  }
+}

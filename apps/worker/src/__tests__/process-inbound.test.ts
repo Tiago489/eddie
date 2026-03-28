@@ -207,4 +207,55 @@ describe('processInboundJob', { timeout: 60000 }, () => {
       data: { isActive: true },
     });
   });
+
+  it('should create MAPPING_WARNING event when output is missing required TMS fields', async () => {
+    const prisma = getDb();
+
+    // Replace active mapping with one that produces an incomplete output
+    await prisma.mapping.updateMany({
+      where: { orgId },
+      data: { isActive: false },
+    });
+    await prisma.mapping.create({
+      data: {
+        orgId,
+        name: 'Incomplete Output',
+        transactionSet: 'EDI_204',
+        direction: 'INBOUND',
+        jsonataExpression: '{ "partialField": "value" }',
+        version: 1,
+        isActive: true,
+      },
+    });
+
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, { ok: true });
+    server.listen();
+
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId, orgId },
+      { prisma, queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    // Should still deliver despite validation warnings
+    expect(result.success).toBe(true);
+    const tx = await prisma.transaction.findFirst();
+    expect(tx?.status).toBe('DELIVERED');
+
+    // Should have created a MAPPING_WARNING event
+    const events = await prisma.transactionEvent.findMany({
+      where: { transactionId: tx!.id, type: 'MAPPING_WARNING' },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0].message).toContain('Missing required field');
+
+    // Restore original mapping
+    await prisma.mapping.deleteMany({ where: { orgId, name: 'Incomplete Output' } });
+    await prisma.mapping.updateMany({
+      where: { orgId },
+      data: { isActive: true },
+    });
+  });
 });

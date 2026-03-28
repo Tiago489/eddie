@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import type { PrismaClient } from '@edi-platform/db';
 import { X12Parser } from '@edi-platform/edi-core';
-import { toJedi204, toJedi997, JsonataEvaluator } from '@edi-platform/jedi';
+import { toJedi204, toJedi997, JsonataEvaluator, validateTmsOutput, defaultTmsSchema } from '@edi-platform/jedi';
 
 export interface InboundJobPayload {
   rawEdi: string;
@@ -147,6 +147,21 @@ export async function processInboundJob(
           type: 'MAPPING_WARNING',
           message: `Mapping evaluation failed, using raw JEDI: ${mapResult.error}`,
           metadata: { mappingId: mapping.id, expression: mapResult.expression },
+        },
+      });
+    }
+  }
+
+  // Validate output shape (warn only — do not block delivery)
+  if (mapping) {
+    const validation = validateTmsOutput(outboundPayload, defaultTmsSchema);
+    if (!validation.valid) {
+      await prisma.transactionEvent.create({
+        data: {
+          transactionId: tx.id,
+          type: 'MAPPING_WARNING',
+          message: `Output validation warnings: ${validation.errors.join('; ')}`,
+          metadata: { mappingId: mapping.id, validationErrors: validation.errors },
         },
       });
     }
