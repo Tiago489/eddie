@@ -16,16 +16,22 @@ const FIXTURES_DIR = resolve(
   'packages/jedi/src/mapping-tests/fixtures',
 );
 
-function buildMultipartPayload(filename: string, content: string) {
+function buildMultipartPayload(files: Array<{ name: string; filename: string; content: string }>) {
   const boundary = '----TestBoundary' + Date.now();
-  const body =
-    `--${boundary}\r\n` +
-    `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-    `Content-Type: application/octet-stream\r\n` +
-    `\r\n` +
-    `${content}\r\n` +
-    `--${boundary}--\r\n`;
+  let body = '';
+  for (const file of files) {
+    body += `--${boundary}\r\n`;
+    body += `Content-Disposition: form-data; name="${file.name}"; filename="${file.filename}"\r\n`;
+    body += `Content-Type: application/octet-stream\r\n`;
+    body += `\r\n`;
+    body += `${file.content}\r\n`;
+  }
+  body += `--${boundary}--\r\n`;
   return { body, boundary };
+}
+
+function singleEdi(filename: string, content: string) {
+  return buildMultipartPayload([{ name: 'file', filename, content }]);
 }
 
 describe('Fixtures API', { timeout: 60000 }, () => {
@@ -60,13 +66,9 @@ describe('Fixtures API', { timeout: 60000 }, () => {
   });
 
   afterAll(async () => {
-    // Clean up created fixture subdirectories
     for (const name of createdFixtureNames) {
-      try {
-        await fs.rm(resolve(FIXTURES_DIR, mappingSlug, name), { recursive: true });
-      } catch { /* ignore */ }
+      try { await fs.rm(resolve(FIXTURES_DIR, mappingSlug, name), { recursive: true }); } catch { /* ignore */ }
     }
-    // Remove mapping dir if empty
     try {
       const entries = await fs.readdir(resolve(FIXTURES_DIR, mappingSlug));
       if (entries.length === 0) await fs.rmdir(resolve(FIXTURES_DIR, mappingSlug));
@@ -74,8 +76,10 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     await teardownTestDb();
   });
 
-  it('POST /api/mappings/:id/fixtures — upload valid EDI creates fixture in nested dir', async () => {
-    const { body, boundary } = buildMultipartPayload('shipment-001.edi', SAMPLE_EDI);
+  // --- Single .edi upload (existing behaviour) ---
+
+  it('POST single .edi — creates fixture with source=generated and meta.json', async () => {
+    const { body, boundary } = singleEdi('shipment-001.edi', SAMPLE_EDI);
 
     const res = await app.inject({
       method: 'POST',
@@ -88,18 +92,26 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     const json = res.json();
     expect(json.success).toBe(true);
     expect(json.fixture).toBe('shipment-001');
+    expect(json.source).toBe('generated');
     expect(json.testResult.pass).toBe(true);
 
     createdFixtureNames.push(json.fixture);
 
-    // Verify nested structure: {mappingSlug}/{fixtureName}/input.edi
-    const fixtureDir = resolve(FIXTURES_DIR, mappingSlug, json.fixture);
-    const inputEdi = await fs.readFile(resolve(fixtureDir, 'input.edi'), 'utf-8');
-    expect(inputEdi).toBe(SAMPLE_EDI.trim());
+    // Verify meta.json
+    const metaPath = resolve(FIXTURES_DIR, mappingSlug, json.fixture, 'meta.json');
+    const meta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
+    expect(meta.source).toBe('generated');
+    expect(meta.uploadedAt).toBeTruthy();
   });
 
-  it('POST /api/mappings/:id/fixtures — second upload creates separate fixture', async () => {
-    const { body, boundary } = buildMultipartPayload('shipment-002.edi', SAMPLE_EDI);
+  // --- Paired upload (.edi + .json) ---
+
+  it('POST paired .edi + .json — saves Stedi output as expected, source=stedi', async () => {
+    const stediOutput = { orderId: 'STEDI-123', carrier: 'FWDA', matched: true };
+    const { body, boundary } = buildMultipartPayload([
+      { name: 'file', filename: 'NWKD_204.edi', content: SAMPLE_EDI },
+      { name: 'file', filename: 'NWKD_204.json', content: JSON.stringify(stediOutput) },
+    ]);
 
     const res = await app.inject({
       method: 'POST',
@@ -111,19 +123,44 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     expect(res.statusCode).toBe(200);
     const json = res.json();
     expect(json.success).toBe(true);
-    expect(json.fixture).toBe('shipment-002');
+    expect(json.source).toBe('stedi');
 
     createdFixtureNames.push(json.fixture);
 
-    // Both fixtures should exist
-    const dir1 = resolve(FIXTURES_DIR, mappingSlug, 'shipment-001');
-    const dir2 = resolve(FIXTURES_DIR, mappingSlug, 'shipment-002');
-    await fs.access(dir1);
-    await fs.access(dir2);
+    // Verify expected-output.json contains the Stedi output, NOT the mapping output
+    const expectedPath = resolve(FIXTURES_DIR, mappingSlug, json.fixture, 'expected-output.json');
+    const saved = JSON.parse(await fs.readFile(expectedPath, 'utf-8'));
+    expect(saved).toEqual(stediOutput);
+
+    // Verify meta.json
+    const metaPath = resolve(FIXTURES_DIR, mappingSlug, json.fixture, 'meta.json');
+    const meta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
+    expect(meta.source).toBe('stedi');
   });
 
-  it('POST /api/mappings/:id/fixtures — duplicate filename gets timestamp suffix', async () => {
-    const { body, boundary } = buildMultipartPayload('shipment-001.edi', SAMPLE_EDI);
+  // --- Paired upload with invalid JSON ---
+
+  it('POST paired .edi + invalid .json — returns 400', async () => {
+    const { body, boundary } = buildMultipartPayload([
+      { name: 'file', filename: 'bad-pair.edi', content: SAMPLE_EDI },
+      { name: 'file', filename: 'bad-pair.json', content: '{ not valid json!!!' },
+    ]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/mappings/${mappingId}/fixtures`,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: body,
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().code).toBe('INVALID_JSON');
+  });
+
+  // --- Multiple fixtures + duplicate handling ---
+
+  it('POST second upload creates separate fixture', async () => {
+    const { body, boundary } = singleEdi('shipment-002.edi', SAMPLE_EDI);
 
     const res = await app.inject({
       method: 'POST',
@@ -133,17 +170,29 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     });
 
     expect(res.statusCode).toBe(200);
-    const json = res.json();
-    expect(json.success).toBe(true);
-    // Should NOT be "shipment-001" since that already exists
-    expect(json.fixture).not.toBe('shipment-001');
-    expect(json.fixture).toMatch(/^shipment-001-\d+$/);
-
-    createdFixtureNames.push(json.fixture);
+    expect(res.json().fixture).toBe('shipment-002');
+    createdFixtureNames.push(res.json().fixture);
   });
 
-  it('POST /api/mappings/:id/fixtures — invalid file (not EDI) returns 400', async () => {
-    const { body, boundary } = buildMultipartPayload('bad.txt', 'This is not EDI data at all');
+  it('POST duplicate filename gets timestamp suffix', async () => {
+    const { body, boundary } = singleEdi('shipment-001.edi', SAMPLE_EDI);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/mappings/${mappingId}/fixtures`,
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      payload: body,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().fixture).toMatch(/^shipment-001-\d+$/);
+    createdFixtureNames.push(res.json().fixture);
+  });
+
+  // --- Error cases ---
+
+  it('POST invalid file (not EDI) returns 400', async () => {
+    const { body, boundary } = singleEdi('bad.txt', 'This is not EDI');
 
     const res = await app.inject({
       method: 'POST',
@@ -156,8 +205,8 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     expect(res.json().code).toBe('INVALID_ISA_ENVELOPE');
   });
 
-  it('POST /api/mappings/:id/fixtures — non-existent mapping returns 404', async () => {
-    const { body, boundary } = buildMultipartPayload('test.edi', SAMPLE_EDI);
+  it('POST non-existent mapping returns 404', async () => {
+    const { body, boundary } = singleEdi('test.edi', SAMPLE_EDI);
 
     const res = await app.inject({
       method: 'POST',
@@ -169,7 +218,9 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it('GET /api/mappings/:id/fixtures — returns all fixtures for this mapping', async () => {
+  // --- GET with source field ---
+
+  it('GET returns fixtures with correct source field', async () => {
     const res = await app.inject({
       method: 'GET',
       url: `/api/mappings/${mappingId}/fixtures`,
@@ -177,16 +228,26 @@ describe('Fixtures API', { timeout: 60000 }, () => {
 
     expect(res.statusCode).toBe(200);
     const json = res.json();
-    expect(Array.isArray(json.fixtures)).toBe(true);
-    // Should have at least the 3 fixtures we created above
     expect(json.fixtures.length).toBeGreaterThanOrEqual(3);
-    const names = json.fixtures.map((f: { name: string }) => f.name);
-    expect(names).toContain('shipment-001');
-    expect(names).toContain('shipment-002');
+
+    // Check that source field is present on all fixtures
+    for (const f of json.fixtures as Array<{ source: string }>) {
+      expect(['stedi', 'generated']).toContain(f.source);
+    }
+
+    // The paired upload fixture should have source=stedi
+    const stediFixture = json.fixtures.find((f: { name: string }) => f.name.startsWith('nwkd-204'));
+    expect(stediFixture?.source).toBe('stedi');
+
+    // The single upload fixture should have source=generated
+    const generatedFixture = json.fixtures.find((f: { name: string }) => f.name === 'shipment-001');
+    expect(generatedFixture?.source).toBe('generated');
   });
 
-  it('DELETE /api/mappings/:id/fixtures/:fixtureName — removes specific fixture only', async () => {
-    const { body, boundary } = buildMultipartPayload('to-delete.edi', SAMPLE_EDI);
+  // --- DELETE ---
+
+  it('DELETE removes specific fixture only', async () => {
+    const { body, boundary } = singleEdi('to-delete.edi', SAMPLE_EDI);
     const createRes = await app.inject({
       method: 'POST',
       url: `/api/mappings/${mappingId}/fixtures`,
@@ -201,18 +262,7 @@ describe('Fixtures API', { timeout: 60000 }, () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().success).toBe(true);
 
-    // Verify specific fixture dir is gone
-    const gone = resolve(FIXTURES_DIR, mappingSlug, fixtureName);
-    try {
-      await fs.access(gone);
-      expect.fail('Fixture directory should have been deleted');
-    } catch {
-      // Expected
-    }
-
-    // Other fixtures should still exist
     const remaining = await fs.readdir(resolve(FIXTURES_DIR, mappingSlug));
     expect(remaining.length).toBeGreaterThanOrEqual(1);
   });

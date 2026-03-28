@@ -18,9 +18,9 @@ const FIXTURES_DIR = path.resolve(
 function slugify(name: string): string {
   return name
     .toLowerCase()
-    .replace(/\[([^\]]+)\]/g, '$1')  // [Carrier] → carrier
-    .replace(/[^a-z0-9]+/g, '-')     // non-alphanum → dash
-    .replace(/^-+|-+$/g, '');        // trim dashes
+    .replace(/\[([^\]]+)\]/g, '$1')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 async function dirExists(dirPath: string): Promise<boolean> {
@@ -32,8 +32,23 @@ async function dirExists(dirPath: string): Promise<boolean> {
   }
 }
 
+interface FixtureMeta {
+  source: 'stedi' | 'generated';
+  uploadedAt: string;
+}
+
+async function readMeta(fixtureDir: string): Promise<FixtureMeta> {
+  try {
+    const raw = await fs.readFile(path.join(fixtureDir, 'meta.json'), 'utf-8');
+    return JSON.parse(raw) as FixtureMeta;
+  } catch {
+    return { source: 'generated', uploadedAt: '' };
+  }
+}
+
 interface FixtureInfo {
   name: string;
+  source: 'stedi' | 'generated';
   inputEdiPreview: string;
   lastTestedAt: string;
   lastTestPassed: boolean;
@@ -44,20 +59,44 @@ export async function fixturesRoutes(app: FastifyInstance) {
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  // POST /api/mappings/:id/fixtures — upload EDI file, create fixture
+  // POST /api/mappings/:id/fixtures — upload EDI file (+ optional paired JSON)
   app.post('/:id/fixtures', async (request, reply) => {
     const { id } = request.params as { id: string };
 
     const mapping = await app.prisma.mapping.findUnique({ where: { id } });
     if (!mapping) return reply.status(404).send({ error: 'Mapping not found' });
 
-    const file = await request.file();
-    if (!file) {
-      return reply.status(400).send({ error: 'No file uploaded' });
+    // Consume all uploaded files
+    const parts = request.parts();
+    let ediContent: string | null = null;
+    let ediFilename = '';
+    let pairedJson: unknown = null;
+
+    for await (const part of parts) {
+      if (part.type !== 'file') continue;
+      const buf = await part.toBuffer();
+      const content = buf.toString('utf-8').trim();
+
+      if (part.filename.endsWith('.json')) {
+        try {
+          pairedJson = JSON.parse(content);
+        } catch {
+          return reply.status(400).send({
+            success: false,
+            error: 'Paired JSON file contains invalid JSON',
+            code: 'INVALID_JSON',
+          });
+        }
+      } else {
+        // Treat any non-.json file as EDI input
+        ediContent = content;
+        ediFilename = part.filename;
+      }
     }
 
-    const buffer = await file.toBuffer();
-    const ediContent = buffer.toString('utf-8').trim();
+    if (!ediContent) {
+      return reply.status(400).send({ error: 'No .edi file uploaded' });
+    }
 
     if (!ediContent.startsWith('ISA')) {
       return reply.status(400).send({
@@ -85,7 +124,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
       });
     }
 
-    // Step 2: Evaluate mapping
+    // Step 2: Evaluate mapping (always run, even with paired JSON)
     const mapResult = await evaluator.evaluate<unknown>(
       mapping.jsonataExpression,
       jediResult.output,
@@ -105,15 +144,18 @@ export async function fixturesRoutes(app: FastifyInstance) {
       warnings.push(...validation.errors);
     }
 
-    // Step 4: Save fixture — nested structure: {mappingSlug}/{fixtureName}/
+    // Determine source and expected output
+    const source: FixtureMeta['source'] = pairedJson !== null ? 'stedi' : 'generated';
+    const expectedOutput = pairedJson ?? mapResult.output;
+
+    // Step 4: Save fixture
     const mappingSlug = slugify(mapping.name);
-    let fixtureName = slugify(file.filename.replace(/\.edi$/i, ''));
+    let fixtureName = slugify(ediFilename.replace(/\.edi$/i, ''));
     if (!fixtureName) fixtureName = 'fixture';
 
     const mappingDir = path.join(FIXTURES_DIR, mappingSlug);
     let fixtureDir = path.join(mappingDir, fixtureName);
 
-    // Avoid overwriting: append timestamp if fixture already exists
     if (await dirExists(fixtureDir)) {
       fixtureName = `${fixtureName}-${Date.now()}`;
       fixtureDir = path.join(mappingDir, fixtureName);
@@ -121,21 +163,24 @@ export async function fixturesRoutes(app: FastifyInstance) {
 
     await fs.mkdir(fixtureDir, { recursive: true });
 
+    const meta: FixtureMeta = { source, uploadedAt: new Date().toISOString() };
+
     await Promise.all([
       fs.writeFile(path.join(fixtureDir, 'input.edi'), ediContent),
       fs.writeFile(
         path.join(fixtureDir, 'expected-output.json'),
-        JSON.stringify(mapResult.output, null, 2) + '\n',
+        JSON.stringify(expectedOutput, null, 2) + '\n',
       ),
       fs.writeFile(path.join(fixtureDir, 'mapping.jsonata'), mapping.jsonataExpression),
+      fs.writeFile(path.join(fixtureDir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n'),
     ]);
 
-    // Step 5: Run the test to confirm it passes
+    // Step 5: Run the test
     const fixture: MappingFixture = {
       name: fixtureName,
       carrier: mapping.name.match(/\[([^\]]+)\]/)?.[1] ?? 'Unknown',
       inputEdi: ediContent,
-      expectedOutput: mapResult.output,
+      expectedOutput,
       jsonataExpression: mapping.jsonataExpression,
     };
 
@@ -144,6 +189,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
     return reply.send({
       success: true,
       fixture: fixtureName,
+      source,
       testResult: testResult.pass
         ? { pass: true, durationMs: testResult.durationMs }
         : { pass: false, errors: testResult.errors },
@@ -179,6 +225,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
           await fs.readFile(path.join(fixtureDir, 'expected-output.json'), 'utf-8'),
         );
         const jsonataExpression = await fs.readFile(path.join(fixtureDir, 'mapping.jsonata'), 'utf-8');
+        const meta = await readMeta(fixtureDir);
 
         const fixtureData: MappingFixture = {
           name: entry,
@@ -192,6 +239,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
 
         fixtures.push({
           name: entry,
+          source: meta.source,
           inputEdiPreview: ediContent.substring(0, 100),
           lastTestedAt: new Date().toISOString(),
           lastTestPassed: testResult.pass,
@@ -204,7 +252,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
     return reply.send({ fixtures });
   });
 
-  // DELETE /api/mappings/:id/fixtures/:fixtureName — remove fixture subdirectory
+  // DELETE /api/mappings/:id/fixtures/:fixtureName
   app.delete('/:id/fixtures/:fixtureName', async (request, reply) => {
     const { id, fixtureName } = request.params as { id: string; fixtureName: string };
 

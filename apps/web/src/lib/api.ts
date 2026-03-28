@@ -53,9 +53,11 @@ export const api = {
 
   getFixtures: (mappingId: string) =>
     apiFetch<{ fixtures: FixtureInfo[] }>(`/api/mappings/${mappingId}/fixtures`),
-  uploadFixture: async (mappingId: string, file: File): Promise<FixtureUploadResult> => {
+  uploadFixture: async (mappingId: string, files: File[]): Promise<FixtureUploadResult> => {
     const formData = new FormData();
-    formData.append('file', file);
+    for (const file of files) {
+      formData.append('file', file);
+    }
     const res = await fetch(BASE + `/api/mappings/${mappingId}/fixtures`, {
       method: 'POST',
       body: formData,

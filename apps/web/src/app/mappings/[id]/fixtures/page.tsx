@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Upload, Trash2, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Upload, Trash2, FileText, CheckCircle, XCircle, Loader2, Shield } from 'lucide-react';
 import Link from 'next/link';
 import type { FixtureUploadResult } from '@/lib/types';
 
@@ -24,11 +24,11 @@ export default function FixturesPage() {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = useCallback(async (file: File) => {
+  const handleUpload = useCallback(async (files: File[]) => {
     setUploading(true);
     setUploadResult(null);
     try {
-      const result = await api.uploadFixture(id, file);
+      const result = await api.uploadFixture(id, files);
       setUploadResult(result);
       if (result.success) mutate();
     } catch (err) {
@@ -44,13 +44,13 @@ export default function FixturesPage() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleUpload(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) handleUpload(files);
   }, [handleUpload]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleUpload(file);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) handleUpload(files);
     e.target.value = '';
   }, [handleUpload]);
 
@@ -84,21 +84,22 @@ export default function FixturesPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".edi"
+          accept=".edi,.json"
+          multiple
           onChange={handleFileSelect}
           className="hidden"
         />
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Processing EDI file...</p>
+            <p className="text-sm text-muted-foreground">Processing files...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
             <Upload className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium">Drop an .edi file here or click to upload</p>
+            <p className="text-sm font-medium">Drop files here or click to upload</p>
             <p className="text-xs text-muted-foreground">
-              The file will be parsed, mapped, and saved as a test fixture
+              Single .edi file (auto-generates expected output) or paired .edi + .json (Stedi ground truth)
             </p>
           </div>
         )}
@@ -114,9 +115,15 @@ export default function FixturesPage() {
               <div className="flex items-center gap-2 font-medium text-green-800">
                 <CheckCircle className="h-4 w-4" />
                 Fixture created: {uploadResult.fixture}
+                {uploadResult.source === 'stedi' && (
+                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Ground Truth</Badge>
+                )}
               </div>
               {uploadResult.testResult?.pass && (
                 <p className="text-green-700">Test passed in {uploadResult.testResult.durationMs}ms</p>
+              )}
+              {uploadResult.testResult && !uploadResult.testResult.pass && (
+                <p className="text-yellow-700">Test failed — expected output may differ from mapping output</p>
               )}
               {uploadResult.warnings && uploadResult.warnings.length > 0 && (
                 <div className="text-yellow-700 mt-2">
@@ -148,6 +155,7 @@ export default function FixturesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Fixture</TableHead>
+              <TableHead>Source</TableHead>
               <TableHead>EDI Preview</TableHead>
               <TableHead>Last Tested</TableHead>
               <TableHead>Status</TableHead>
@@ -158,6 +166,16 @@ export default function FixturesPage() {
             {fixtures.map((f) => (
               <TableRow key={f.name}>
                 <TableCell className="font-mono text-sm">{f.name}</TableCell>
+                <TableCell>
+                  {f.source === 'stedi' ? (
+                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 gap-1">
+                      <Shield className="h-3 w-3" />
+                      Stedi
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Auto-generated</Badge>
+                  )}
+                </TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground max-w-xs truncate">
                   {f.inputEdiPreview}
                 </TableCell>

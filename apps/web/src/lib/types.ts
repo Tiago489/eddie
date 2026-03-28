@@ -84,6 +84,7 @@ export interface TransactionParams {
 
 export interface FixtureInfo {
   name: string;
+  source: 'stedi' | 'generated';
   inputEdiPreview: string;
   lastTestedAt: string;
   lastTestPassed: boolean;
@@ -92,6 +93,7 @@ export interface FixtureInfo {
 export interface FixtureUploadResult {
   success: boolean;
   fixture?: string;
+  source?: 'stedi' | 'generated';
   testResult?: { pass: boolean; durationMs?: number; errors?: string[] };
   warnings?: string[];
   error?: string;
