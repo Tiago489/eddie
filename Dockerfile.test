@@ -1,0 +1,30 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache openssl && npm install -g pnpm@10
+
+WORKDIR /app
+
+# Copy workspace config
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
+
+# Copy packages (source + tests — bypassing .dockerignore with explicit paths)
+COPY packages/types/ ./packages/types/
+COPY packages/db/ ./packages/db/
+COPY packages/edi-core/ ./packages/edi-core/
+COPY packages/jedi/ ./packages/jedi/
+COPY packages/sftp/ ./packages/sftp/
+
+# Copy test fixtures
+COPY tests/ ./tests/
+
+# Install all deps
+RUN pnpm install --frozen-lockfile
+
+# Generate Prisma client
+ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+RUN pnpm --filter @edi-platform/db db:generate
+
+# Create packages-only vitest workspace
+RUN echo 'import { defineWorkspace } from "vitest/config"; export default defineWorkspace(["packages/*/vitest.config.ts"]);' > vitest.workspace.ts
+
+CMD ["pnpm", "exec", "vitest", "run", "--reporter=verbose"]

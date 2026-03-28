@@ -54,6 +54,10 @@ type MappingResult<T> =
 - **Fixture files:** All EDI samples and expected JEDI outputs live in `/tests/fixtures/`
 - **Golden file pattern:** For mapping tests, assert against fixture JSON files
 
+### Known Gotchas
+
+- For timeout/async testing in the TypeScript engine, avoid `Promise.race` with synchronous evaluation functions — use worker threads or explicit cancellation tokens instead. JSONata `evaluate()` is synchronous and blocks the event loop; `Promise.race` cannot interrupt it.
+
 ### Coverage Targets
 | Area | Target |
 |---|---|
@@ -106,3 +110,11 @@ docker-compose up -d              # start Postgres, Redis, SFTP
 5. Write tests first (RED), then implement (GREEN), then refactor
 6. Add JEDI type in `packages/jedi/src/types/jedi.ts`
 7. Update Prisma migration if new `transactionSet` enum value needed
+
+## Docker & Deployment
+
+- Always use explicit package manager install steps (`npm install -g pnpm@10`) — avoid `corepack enable`/`corepack prepare` which is unreliable in Alpine images.
+- Verify build context includes all necessary files (especially `tsconfig.base.json`, `pnpm-workspace.yaml`) before writing Dockerfiles.
+- Test Docker builds incrementally: build one image at a time, verify it runs, then compose.
+- Alpine images need `apk add --no-cache openssl` for Prisma to work.
+- Use `tsx` (installed globally) to run TypeScript directly in production containers — avoids `tsc` build issues with monorepo path resolution.
