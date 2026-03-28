@@ -12,12 +12,16 @@
     "db:seed": "pnpm --filter @edi-platform/db db:seed",
     "db:reset": "pnpm --filter @edi-platform/db db:reset",
     "setup": "docker compose up -d && pnpm install && pnpm --filter @edi-platform/db db:migrate && pnpm db:seed",
-    "validate:maps": "node node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs scripts/validate-maps.ts"
+    "validate:maps": "node node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs scripts/validate-maps.ts",
+    "migrate:stedi": "node node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs scripts/stedi-migrate.ts",
+    "migrate:stedi:rollback": "node node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs scripts/stedi-migrate.ts --rollback"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^11.13.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "@vitest/coverage-v8": "^1.6.1",
+    "dotenv": "^17.3.1",
     "eslint": "^8.57.0",
     "prettier": "^3.2.0",
     "typescript": "^5.4.0",

@@ -70,6 +70,7 @@ model Mapping {
   transactionSet     TransactionSet
   direction          MappingDirection
   jsonataExpression  String         @db.Text
+  stediGuideId       String?
   version            Int            @default(1)
   isActive           Boolean        @default(true)
   createdAt          DateTime       @default(now())
@@ -162,4 +163,18 @@ model TransactionEvent {
   createdAt     DateTime    @default(now())
 
   @@index([transactionId])
+}
+
+enum MigrationRunStatus {
+  PENDING
+  COMPLETE
+  ROLLED_BACK
+}
+
+model MigrationRun {
+  id           String             @id @default(cuid())
+  status       MigrationRunStatus @default(PENDING)
+  report       Json
+  rolledBackAt DateTime?
+  createdAt    DateTime           @default(now())
 }
