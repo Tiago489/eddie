@@ -7,7 +7,22 @@ function omitCredentials(record: Record<string, unknown>) {
 }
 
 export async function downstreamApisRoutes(app: FastifyInstance) {
-  app.post('/', async (request, reply) => {
+  app.post('/', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['orgId', 'name', 'baseUrl', 'authType'],
+        properties: {
+          orgId: { type: 'string', minLength: 1 },
+          name: { type: 'string', minLength: 1 },
+          baseUrl: { type: 'string', minLength: 1 },
+          authType: { type: 'string', enum: ['NONE', 'API_KEY', 'BEARER', 'BASIC'] },
+          credentials: { type: 'string' },
+          timeoutMs: { type: 'integer' },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
     const { credentials, ...rest } = body;
     const data: Record<string, unknown> = { ...rest };
@@ -35,6 +50,8 @@ export async function downstreamApisRoutes(app: FastifyInstance) {
 
   app.put('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const existing = await app.prisma.downstreamApi.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
     const body = request.body as Record<string, unknown>;
     const updateData: Record<string, unknown> = {};
     if (body.credentials) {
@@ -49,6 +66,8 @@ export async function downstreamApisRoutes(app: FastifyInstance) {
 
   app.delete('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const existing = await app.prisma.downstreamApi.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
     await app.prisma.downstreamApi.delete({ where: { id } });
     return reply.send({ success: true });
   });

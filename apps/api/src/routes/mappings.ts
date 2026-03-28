@@ -4,7 +4,22 @@ import { JsonataEvaluator } from '@edi-platform/jedi';
 const evaluator = new JsonataEvaluator();
 
 export async function mappingsRoutes(app: FastifyInstance) {
-  app.post('/', async (request, reply) => {
+  app.post('/', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['orgId', 'name', 'transactionSet', 'direction', 'jsonataExpression'],
+        properties: {
+          orgId: { type: 'string', minLength: 1 },
+          name: { type: 'string', minLength: 1 },
+          transactionSet: { type: 'string', enum: ['EDI_204', 'EDI_211', 'EDI_214', 'EDI_210', 'EDI_990', 'EDI_997'] },
+          direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND'] },
+          jsonataExpression: { type: 'string' },
+          version: { type: 'number' },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
     const record = await app.prisma.mapping.create({
       data: {
@@ -38,6 +53,8 @@ export async function mappingsRoutes(app: FastifyInstance) {
 
   app.put('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const existing = await app.prisma.mapping.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
     const body = request.body as Record<string, unknown>;
     const record = await app.prisma.mapping.update({ where: { id }, data: body as any });
     return reply.send(record);
@@ -45,6 +62,8 @@ export async function mappingsRoutes(app: FastifyInstance) {
 
   app.delete('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const existing = await app.prisma.mapping.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
     await app.prisma.mapping.update({ where: { id }, data: { isActive: false } });
     return reply.send({ success: true });
   });

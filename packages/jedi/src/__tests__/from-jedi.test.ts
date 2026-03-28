@@ -123,6 +123,123 @@ describe('fromJedi210', () => {
   });
 });
 
+describe('sender/receiver swap', () => {
+  it('should swap ISA sender/receiver for outbound direction in 990', () => {
+    const jediDoc = loadJedi204();
+    const result = fromJedi990(jediDoc);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const parseResult = parser.parse(result.output);
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+
+    // Original: sender=SENDER, receiver=RECEIVER
+    // Outbound should swap: sender=RECEIVER, receiver=SENDER
+    const isaSegment = parseResult.data.segments[0];
+    expect(isaSegment[6].trim()).toBe('RECEIVER');
+    expect(isaSegment[8].trim()).toBe('SENDER');
+  });
+
+  it('should swap ISA sender/receiver for outbound direction in 214', () => {
+    const jediDoc = loadJedi204();
+    const result = fromJedi214(jediDoc, { statusCode: 'AF', statusReason: 'AA' });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const parseResult = parser.parse(result.output);
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+
+    const isaSegment = parseResult.data.segments[0];
+    expect(isaSegment[6].trim()).toBe('RECEIVER');
+    expect(isaSegment[8].trim()).toBe('SENDER');
+  });
+
+  it('should swap ISA sender/receiver for outbound direction in 210', () => {
+    const jediDoc = loadJedi204();
+    const result = fromJedi210(jediDoc, { invoiceNumber: 'INV-001', totalCharges: 100 });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const parseResult = parser.parse(result.output);
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+
+    const isaSegment = parseResult.data.segments[0];
+    expect(isaSegment[6].trim()).toBe('RECEIVER');
+    expect(isaSegment[8].trim()).toBe('SENDER');
+  });
+});
+
+describe('extractTs204 edge cases', () => {
+  it('should handle JEDI doc where transaction set has no detail property', () => {
+    const jedi: JediDocument = {
+      interchanges: [{
+        ISA_01_AuthorizationInformationQualifier: '00',
+        ISA_02_AuthorizationInformation: '',
+        ISA_06_InterchangeSenderId: 'A',
+        ISA_08_InterchangeReceiverId: 'B',
+        ISA_13_InterchangeControlNumber: '1',
+        functional_groups: [{
+          GS_02_ApplicationSenderCode: 'A',
+          GS_03_ApplicationReceiverCode: 'B',
+          GS_06_GroupControlNumber: '1',
+          transaction_sets: [{
+            heading: {
+              transaction_set_header_ST: { ST_01_TransactionSetIdentifierCode: '997', ST_02_TransactionSetControlNumber: '0001' },
+              functional_group_response_header_AK1: { AK1_01_FunctionalIdentifierCode: 'SM', AK1_02_GroupControlNumber: '1' },
+              functional_group_response_trailer_AK9: { AK9_01_FunctionalGroupAcknowledgeCode: 'A', AK9_02_NumberOfTransactionSetsIncluded: '1', AK9_03_NumberOfReceivedTransactionSets: '1', AK9_04_NumberOfAcceptedTransactionSets: '1' },
+              transaction_set_trailer_SE: { SE_01_NumberOfIncludedSegments: '3', SE_02_TransactionSetControlNumber: '0001' },
+            },
+          }],
+        }],
+      }],
+    };
+
+    // 990 should fail because extractTs204 returns null (no 'detail' in 997)
+    const result = fromJedi990(jedi);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.toLowerCase()).toContain('shipment');
+    }
+  });
+});
+
+describe('fromJedi214 with non-204 transaction set', () => {
+  it('should handle JEDI doc with no detail property gracefully', () => {
+    const jedi: JediDocument = {
+      interchanges: [{
+        ISA_01_AuthorizationInformationQualifier: '00',
+        ISA_02_AuthorizationInformation: '',
+        ISA_06_InterchangeSenderId: 'A',
+        ISA_08_InterchangeReceiverId: 'B',
+        ISA_13_InterchangeControlNumber: '1',
+        functional_groups: [{
+          GS_02_ApplicationSenderCode: 'A',
+          GS_03_ApplicationReceiverCode: 'B',
+          GS_06_GroupControlNumber: '1',
+          transaction_sets: [{
+            heading: {
+              transaction_set_header_ST: { ST_01_TransactionSetIdentifierCode: '997', ST_02_TransactionSetControlNumber: '0001' },
+              functional_group_response_header_AK1: { AK1_01_FunctionalIdentifierCode: 'SM', AK1_02_GroupControlNumber: '1' },
+              functional_group_response_trailer_AK9: { AK9_01_FunctionalGroupAcknowledgeCode: 'A', AK9_02_NumberOfTransactionSetsIncluded: '1', AK9_03_NumberOfReceivedTransactionSets: '1', AK9_04_NumberOfAcceptedTransactionSets: '1' },
+              transaction_set_trailer_SE: { SE_01_NumberOfIncludedSegments: '3', SE_02_TransactionSetControlNumber: '0001' },
+            },
+          }],
+        }],
+      }],
+    };
+
+    // 214 should still succeed but with empty shipmentId/scac/no stops
+    const result = fromJedi214(jedi, { statusCode: 'AF', statusReason: 'AA' });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.output).toContain('ST*214');
+    expect(result.output).toContain('B10**');
+  });
+});
+
 describe('from-jedi with minimal JEDI input', () => {
   function minimalJedi(): JediDocument {
     return {
@@ -208,6 +325,39 @@ describe('from-jedi with minimal JEDI input', () => {
     if (!result.success) return;
     expect(result.output).toContain('N1*SH*');
     expect(result.output).toContain('N1*CA*XSCAC');
+  });
+
+  it('should generate 214 with stop N4 that has null city and state', () => {
+    const jedi = minimalJedi();
+    const ts = jedi.interchanges[0].functional_groups[0].transaction_sets[0] as Record<string, unknown>;
+    (ts as { detail: { stop_off_details_loop_S5: unknown[] } }).detail.stop_off_details_loop_S5 = [
+      {
+        stop_off_details_S5: { S5_01_StopSequenceNumber: '1', S5_02_StopReasonCode: 'CL' },
+        party_identification_loop_N1: [{
+          name_N1: { N1_01_EntityIdentifierCode: 'SF' },
+          geographic_location_N4: {},
+        }],
+      },
+    ];
+
+    const result = fromJedi214(jedi, { statusCode: 'AF', statusReason: 'AA' });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    // MS1 should be present but with empty fields
+    expect(result.output).toContain('MS1*');
+  });
+
+  it('should generate 210 with missing shipmentId and SCAC', () => {
+    const jedi = minimalJedi();
+    const ts = jedi.interchanges[0].functional_groups[0].transaction_sets[0] as Record<string, unknown>;
+    delete (ts as { heading: { beginning_segment_for_shipper_order_B2: Record<string, unknown> } })
+      .heading.beginning_segment_for_shipper_order_B2.B2_04_ShipmentIdentificationNumber;
+
+    const result = fromJedi210(jedi, { invoiceNumber: 'INV-X', totalCharges: 0 });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    // Should still generate B3 but with empty shipmentId
+    expect(result.output).toContain('B3**INV-X*');
   });
 
   it('should generate 210 from minimal JEDI (no N1 loops, no SCAC)', () => {

@@ -7,7 +7,25 @@ function omitPassword(record: Record<string, unknown>) {
 }
 
 export async function sftpConnectionsRoutes(app: FastifyInstance) {
-  app.post('/', async (request, reply) => {
+  app.post('/', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['tradingPartnerId', 'host', 'username', 'password', 'remotePath', 'archivePath'],
+        properties: {
+          tradingPartnerId: { type: 'string', minLength: 1 },
+          host: { type: 'string', minLength: 1 },
+          username: { type: 'string', minLength: 1 },
+          password: { type: 'string', minLength: 1 },
+          remotePath: { type: 'string', minLength: 1 },
+          archivePath: { type: 'string', minLength: 1 },
+          port: { type: 'integer', default: 22 },
+          pollingIntervalSeconds: { type: 'integer' },
+          filePattern: { type: 'string' },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
     const { password, ...rest } = body;
     const data = {
@@ -35,6 +53,8 @@ export async function sftpConnectionsRoutes(app: FastifyInstance) {
 
   app.put('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const existing = await app.prisma.sftpConnection.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
     const body = request.body as Record<string, unknown>;
     const updateData: Record<string, unknown> = {};
     if (body.password) {
@@ -50,6 +70,8 @@ export async function sftpConnectionsRoutes(app: FastifyInstance) {
 
   app.delete('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
+    const existing = await app.prisma.sftpConnection.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
     await app.prisma.sftpConnection.update({ where: { id }, data: { isActive: false } });
     return reply.send({ success: true });
   });

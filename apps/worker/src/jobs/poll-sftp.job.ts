@@ -18,6 +18,7 @@ export interface PollSftpResult {
   filesEnqueued: number;
   filesSkipped: number;
   error?: string;
+  errors?: Array<{ file: string; error: string }>;
 }
 
 export async function pollSftpJob(
@@ -47,39 +48,47 @@ export async function pollSftpJob(
 
   let filesEnqueued = 0;
   let filesSkipped = 0;
+  const errors: Array<{ file: string; error: string }> = [];
 
   for (const filePath of filePaths) {
-    const content = await transport.getFile(filePath);
-    const contentHash = createHash('sha256').update(content).digest('hex');
+    try {
+      const content = await transport.getFile(filePath);
+      const contentHash = createHash('sha256').update(content).digest('hex');
 
-    const existing = await prisma.transaction.findFirst({
-      where: {
-        contentHash,
-        status: { notIn: ['DUPLICATE', 'FAILED'] },
-      },
-    });
-
-    const fileName = filePath.split('/').pop() ?? filePath;
-
-    if (existing) {
-      filesSkipped++;
-    } else {
-      await deps.queues.inboundEdi.add('process-inbound', {
-        rawEdi: content.toString(),
-        tradingPartnerId: conn.tradingPartnerId,
-        orgId: conn.tradingPartner.orgId,
-        sourceFile: fileName,
+      const existing = await prisma.transaction.findFirst({
+        where: {
+          contentHash,
+          status: { notIn: ['DUPLICATE', 'FAILED'] },
+        },
       });
-      filesEnqueued++;
-    }
 
-    await transport.archiveFile(filePath, `${conn.archivePath}/${fileName}`);
+      const fileName = filePath.split('/').pop() ?? filePath;
+
+      if (existing) {
+        filesSkipped++;
+      } else {
+        await deps.queues.inboundEdi.add('process-inbound', {
+          rawEdi: content.toString(),
+          tradingPartnerId: conn.tradingPartnerId,
+          orgId: conn.tradingPartner.orgId,
+          sourceFile: fileName,
+        });
+        filesEnqueued++;
+      }
+
+      await transport.archiveFile(filePath, `${conn.archivePath}/${fileName}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[poll-sftp] Failed to process file ${filePath}: ${msg}`);
+      errors.push({ file: filePath, error: msg });
+    }
   }
 
   return {
-    success: true,
+    success: errors.length === 0,
     filesFound: filePaths.length,
     filesEnqueued,
     filesSkipped,
+    errors: errors.length > 0 ? errors : undefined,
   };
 }

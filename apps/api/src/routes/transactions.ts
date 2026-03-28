@@ -5,8 +5,8 @@ export async function transactionsRoutes(app: FastifyInstance) {
     const { orgId, status, page: pageStr, limit: limitStr } = request.query as {
       orgId?: string; status?: string; page?: string; limit?: string;
     };
-    const page = Number(pageStr) || 1;
-    const limit = Number(limitStr) || 10;
+    const page = Math.max(1, Number(pageStr) || 1);
+    const limit = Math.min(100, Math.max(1, Number(limitStr) || 10));
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {};

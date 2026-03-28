@@ -140,6 +140,15 @@ export async function processInboundJob(
     );
     if (mapResult.success) {
       outboundPayload = mapResult.output;
+    } else {
+      await prisma.transactionEvent.create({
+        data: {
+          transactionId: tx.id,
+          type: 'MAPPING_WARNING',
+          message: `Mapping evaluation failed, using raw JEDI: ${mapResult.error}`,
+          metadata: { mappingId: mapping.id, expression: mapResult.expression },
+        },
+      });
     }
   }
 

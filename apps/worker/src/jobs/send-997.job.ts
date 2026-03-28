@@ -86,7 +86,12 @@ export async function send997Job(
   const filename = `997_${tx.isaControlNumber}_${Date.now()}.edi`;
   const path = `${sftpConn.remotePath}/${filename}`;
 
-  await transport.putFile(path, Buffer.from(edi997));
+  try {
+    await transport.putFile(path, Buffer.from(edi997));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: `Failed to write 997 to ${path}: ${msg}` };
+  }
 
   await prisma.transactionEvent.create({
     data: {
