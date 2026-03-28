@@ -1,0 +1,46 @@
+{
+  "interchanges": [
+    {
+      "ISA_01_AuthorizationInformationQualifier": "00",
+      "ISA_02_AuthorizationInformation": "          ",
+      "ISA_06_InterchangeSenderId": "MINSHIP",
+      "ISA_08_InterchangeReceiverId": "MINRECV",
+      "ISA_13_InterchangeControlNumber": "000000010",
+      "ISA_14_AcknowledgmentRequested": "0",
+      "ISA_15_InterchangeUsageIndicator": "P",
+      "functional_groups": [
+        {
+          "GS_02_ApplicationSenderCode": "MINSHIP",
+          "GS_03_ApplicationReceiverCode": "MINRECV",
+          "GS_04_Date": "20230201",
+          "GS_05_Time": "0900",
+          "GS_06_GroupControlNumber": "10",
+          "transaction_sets": [
+            {
+              "heading": {
+                "transaction_set_header_ST": {
+                  "ST_01_TransactionSetIdentifierCode": "204",
+                  "ST_02_TransactionSetControlNumber": "0001"
+                },
+                "beginning_segment_for_shipper_order_B2": {
+                  "B2_02_StandardCarrierAlphaCode": "XSCAC",
+                  "B2_04_ShipmentIdentificationNumber": "MINBOL001",
+                  "B2_06_ShipmentMethodOfPayment": "PP"
+                }
+              },
+              "detail": {
+                "stop_off_details_loop_S5": []
+              },
+              "summary": {
+                "transaction_set_trailer_SE": {
+                  "SE_01_NumberOfIncludedSegments": "3",
+                  "SE_02_TransactionSetControlNumber": "0001"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

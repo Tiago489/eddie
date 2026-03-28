@@ -1,0 +1,143 @@
+{
+  "interchanges": [
+    {
+      "ISA_01_AuthorizationInformationQualifier": "00",
+      "ISA_02_AuthorizationInformation": "          ",
+      "ISA_06_InterchangeSenderId": "SENDER",
+      "ISA_08_InterchangeReceiverId": "RECEIVER",
+      "ISA_13_InterchangeControlNumber": "000000011",
+      "ISA_14_AcknowledgmentRequested": "0",
+      "ISA_15_InterchangeUsageIndicator": "P",
+      "functional_groups": [
+        {
+          "GS_02_ApplicationSenderCode": "SENDER",
+          "GS_03_ApplicationReceiverCode": "RECEIVER",
+          "GS_04_Date": "20230301",
+          "GS_05_Time": "1400",
+          "GS_06_GroupControlNumber": "11",
+          "transaction_sets": [
+            {
+              "heading": {
+                "transaction_set_header_ST": {
+                  "ST_01_TransactionSetIdentifierCode": "204",
+                  "ST_02_TransactionSetControlNumber": "0001"
+                },
+                "beginning_segment_for_shipper_order_B2": {
+                  "B2_02_StandardCarrierAlphaCode": "SCAC",
+                  "B2_04_ShipmentIdentificationNumber": "MULTI001",
+                  "B2_06_ShipmentMethodOfPayment": "PP"
+                },
+                "reference_identification_L11": [
+                  {
+                    "L11_01_ReferenceIdentification": "PO-9999",
+                    "L11_02_ReferenceIdentificationQualifier": "PO"
+                  }
+                ]
+              },
+              "detail": {
+                "stop_off_details_loop_S5": [
+                  {
+                    "stop_off_details_S5": {
+                      "S5_01_StopSequenceNumber": "1",
+                      "S5_02_StopReasonCode": "CL"
+                    },
+                    "party_identification_loop_N1": [
+                      {
+                        "name_N1": {
+                          "N1_01_EntityIdentifierCode": "SF",
+                          "N1_02_Name": "Pickup A",
+                          "N1_03_IdentificationCodeQualifier": "93",
+                          "N1_04_IdentificationCode": "PA001"
+                        },
+                        "address_information_N3": {
+                          "N3_01_AddressInformation": "1 First St"
+                        },
+                        "geographic_location_N4": {
+                          "N4_01_CityName": "Miami",
+                          "N4_02_StateOrProvinceCode": "FL",
+                          "N4_03_PostalCode": "33101"
+                        }
+                      }
+                    ],
+                    "date_time_reference_G62": [
+                      {
+                        "G62_01_DateQualifier": "10",
+                        "G62_02_Date": "20230301"
+                      }
+                    ]
+                  },
+                  {
+                    "stop_off_details_S5": {
+                      "S5_01_StopSequenceNumber": "2",
+                      "S5_02_StopReasonCode": "CU"
+                    },
+                    "party_identification_loop_N1": [
+                      {
+                        "name_N1": {
+                          "N1_01_EntityIdentifierCode": "ST",
+                          "N1_02_Name": "Drop B",
+                          "N1_03_IdentificationCodeQualifier": "93",
+                          "N1_04_IdentificationCode": "DB001"
+                        },
+                        "address_information_N3": {
+                          "N3_01_AddressInformation": "2 Second Ave"
+                        },
+                        "geographic_location_N4": {
+                          "N4_01_CityName": "Atlanta",
+                          "N4_02_StateOrProvinceCode": "GA",
+                          "N4_03_PostalCode": "30301"
+                        }
+                      }
+                    ],
+                    "date_time_reference_G62": [
+                      {
+                        "G62_01_DateQualifier": "11",
+                        "G62_02_Date": "20230302"
+                      }
+                    ]
+                  },
+                  {
+                    "stop_off_details_S5": {
+                      "S5_01_StopSequenceNumber": "3",
+                      "S5_02_StopReasonCode": "CU"
+                    },
+                    "party_identification_loop_N1": [
+                      {
+                        "name_N1": {
+                          "N1_01_EntityIdentifierCode": "ST",
+                          "N1_02_Name": "Drop C",
+                          "N1_03_IdentificationCodeQualifier": "93",
+                          "N1_04_IdentificationCode": "DC001"
+                        },
+                        "address_information_N3": {
+                          "N3_01_AddressInformation": "3 Third Blvd"
+                        },
+                        "geographic_location_N4": {
+                          "N4_01_CityName": "Nashville",
+                          "N4_02_StateOrProvinceCode": "TN",
+                          "N4_03_PostalCode": "37201"
+                        }
+                      }
+                    ],
+                    "date_time_reference_G62": [
+                      {
+                        "G62_01_DateQualifier": "11",
+                        "G62_02_Date": "20230303"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "summary": {
+                "transaction_set_trailer_SE": {
+                  "SE_01_NumberOfIncludedSegments": "19",
+                  "SE_02_TransactionSetControlNumber": "0001"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
