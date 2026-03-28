@@ -7,6 +7,7 @@ import { mappingsRoutes } from './routes/mappings';
 import { downstreamApisRoutes } from './routes/downstream-apis';
 import { transactionsRoutes } from './routes/transactions';
 import { outboundRoutes } from './routes/outbound';
+import { wizardRoutes } from './routes/wizard';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -43,6 +44,7 @@ export function buildApp(opts?: AppOptions): FastifyInstance {
   app.register(downstreamApisRoutes, { prefix: '/api/downstream-apis' });
   app.register(transactionsRoutes, { prefix: '/api/transactions' });
   app.register(outboundRoutes, { prefix: '/api/outbound' });
+  app.register(wizardRoutes, { prefix: '/api/wizard' });
 
   return app;
 }

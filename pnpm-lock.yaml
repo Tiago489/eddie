@@ -41,6 +41,9 @@ importers:
       '@edi-platform/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@edi-platform/edi-core':
+        specifier: workspace:*
+        version: link:../../packages/edi-core
       '@edi-platform/jedi':
         specifier: workspace:*
         version: link:../../packages/jedi

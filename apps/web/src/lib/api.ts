@@ -63,4 +63,10 @@ export const api = {
     apiFetch<Transaction>(`/api/transactions/${id}`),
   reprocessTransaction: (id: string) =>
     apiFetch(`/api/transactions/${id}/reprocess`, { method: 'POST' }),
+
+  // Wizard
+  wizardParse: (rawEdi: string, orgId: string) =>
+    apiFetch<{ success: boolean; transactionSet?: string; delimiters?: { element: string; segment: string }; segmentCount?: number; warnings?: string[]; jedi?: unknown; error?: string; code?: string }>('/api/wizard/parse', { method: 'POST', body: JSON.stringify({ rawEdi, orgId }) }),
+  wizardSend: (body: { jedi: unknown; mappingId: string | null; downstreamApiId: string; orgId: string }) =>
+    apiFetch<{ success: boolean; transactionId?: string; status?: string; outboundPayload?: unknown; downstreamResponse?: { statusCode: number; body: string }; error?: string }>('/api/wizard/send', { method: 'POST', body: JSON.stringify(body) }),
 };
