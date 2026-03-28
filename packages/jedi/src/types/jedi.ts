@@ -70,52 +70,117 @@ export interface Jedi204 {
   };
 }
 
-// Jedi211 — Motor Carrier Bill of Lading
+// Jedi211 — Motor Carrier Bill of Lading (Stedi-compatible flat format)
+// Stedi mappings expect: { envelope, transactionSets[] } at the top level
+// with guide-based field names (e.g. shipment_identification_number_03)
 
-export interface G61_Contact {
-  G61_01_ContactFunctionCode?: string;
-  G61_02_Name?: string;
-  G61_03_CommunicationNumberQualifier?: string;
-  G61_04_CommunicationNumber?: string;
+export interface StediEnvelope {
+  interchangeHeader: {
+    authorizationInformationQualifier?: string;
+    authorizationInformation?: string;
+    senderId: string;
+    receiverId: string;
+    controlNumber: string;
+    acknowledgmentRequestedCode?: string;
+    usageIndicatorCode?: string;
+  };
 }
 
-export interface N1_Loop_211 extends N1_Loop {
-  contact_G61?: G61_Contact;
+export interface StediN1Loop {
+  name_N1: {
+    entity_identifier_code_01: string;
+    name_02?: string;
+    identification_code_qualifier_03?: string;
+    identification_code_04?: string;
+  };
+  address_information_N3?: Array<{
+    address_information_01: string;
+    address_information_02?: string;
+  }>;
+  geographic_location_N4?: {
+    city_name_01?: string;
+    state_or_province_code_02?: string;
+    postal_code_03?: string;
+    country_code_04?: string;
+  };
+  contact_G61?: Array<{
+    contact_function_code_01?: string;
+    name_02?: string;
+    communication_number_qualifier_03?: string;
+    communication_number_04?: string;
+  }>;
 }
 
-export interface Jedi211 {
+export interface Stedi211TransactionSet {
   heading: {
-    transaction_set_header_ST: ST_Header;
-    bill_of_lading_BOL: {
-      BOL_01_StandardCarrierAlphaCode: string;
-      BOL_02_ShipmentMethodOfPayment: string;
-      BOL_03_ShipmentIdentificationNumber: string;
-      BOL_04_Date?: string;
-      BOL_05_Time?: string;
-      BOL_06_ReferenceIdentification?: string;
+    transaction_set_header_ST: {
+      transaction_set_identifier_code_01: string;
+      transaction_set_control_number_02: string;
+    };
+    beginning_segment_for_the_motor_carrier_bill_of_lading_BOL: {
+      standard_carrier_alpha_code_01: string;
+      shipment_method_of_payment_02: string;
+      shipment_identification_number_03: string;
+      date_04?: string;
+      time_05?: string;
+      reference_identification_06?: string;
     };
     set_purpose_B2A?: {
-      B2A_01_TransactionSetPurposeCode: string;
+      transaction_set_purpose_code_01: string;
     };
-    reference_identification_L11?: L11_Reference[];
-    date_time_reference_G62?: G62_DateTime[];
-    party_identification_loop_N1?: N1_Loop_211[];
+    business_instructions_and_reference_number_L11?: Array<{
+      reference_identification_01: string;
+      reference_identification_qualifier_02: string;
+    }>;
+    date_time_G62?: Array<{
+      date_qualifier_01?: string;
+      date_02?: string;
+    }>;
+    bill_of_lading_handling_requirements_AT5?: Array<{
+      special_handling_code_01?: string;
+      special_handling_description_02?: string;
+    }>;
+    remarks_K1?: Array<{
+      free_form_message_01?: string;
+      free_form_message_02?: string;
+    }>;
+    [key: `name_N1_loop_${string}`]: StediN1Loop | undefined;
   };
   detail: {
-    line_items: Array<{
-      assigned_number_LX?: {
-        LX_01_AssignedNumber: string;
-      };
-      description?: string;
-      weight?: string;
-      weight_qualifier?: string;
-      pieces?: string;
-      packaging_code?: string;
+    bill_of_lading_line_item_number_AT1_loop?: Array<{
+      bill_of_lading_line_item_detail_AT2_loop?: Array<{
+        bill_of_lading_line_item_detail_AT2: {
+          lading_quantity_01?: string;
+          packaging_form_code_02?: string;
+          weight_qualifier_03?: string;
+          weight_unit_code_04?: string;
+          weight_05?: string;
+        };
+      }>;
+      bill_of_lading_description_AT4?: Array<{
+        lading_description_01?: string;
+      }>;
+      bill_of_lading_charges_AT3?: Array<{
+        allowance_or_charge_rate_01?: string;
+        freight_rate_02?: string;
+      }>;
+      business_instructions_and_reference_number_L11?: Array<{
+        reference_identification_01: string;
+        reference_identification_qualifier_02: string;
+      }>;
     }>;
   };
   summary?: {
-    transaction_set_trailer_SE: SE_Trailer;
+    transaction_set_trailer_SE: {
+      number_of_included_segments_01: string;
+      transaction_set_control_number_02: string;
+    };
   };
+}
+
+export interface Jedi211 {
+  envelope: StediEnvelope;
+  transactionSets: Stedi211TransactionSet[];
 }
 
 // Jedi997 — Functional Acknowledgment
@@ -155,7 +220,7 @@ export interface JediFunctionalGroup {
   GS_04_Date?: string;
   GS_05_Time?: string;
   GS_06_GroupControlNumber: string;
-  transaction_sets: Array<Jedi204 | Jedi211 | Jedi997>;
+  transaction_sets: Array<Jedi204 | Jedi997>;
 }
 
 export interface JediInterchangeEnvelope {
@@ -169,6 +234,6 @@ export interface JediInterchangeEnvelope {
   functional_groups: JediFunctionalGroup[];
 }
 
-export interface JediDocument {
-  interchanges: JediInterchangeEnvelope[];
-}
+export type JediDocument =
+  | { interchanges: JediInterchangeEnvelope[] }
+  | Jedi211;

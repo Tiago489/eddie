@@ -1,0 +1,155 @@
+{
+  "senderId": "FWDAC",
+  "receiverId": $$.envelope.interchangeHeader.receiverId,
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": $$.transactionSets[0].heading.transaction_set_header_ST.transaction_set_identifier_code_01,
+  "transactionSetPurposeCode": $lookupTable(
+    $tables.PURPOSE_CODES,
+    "Key",
+    $$.transactionSets[0].heading.set_purpose_B2A.transaction_set_purpose_code_01
+  )
+    .Value,
+  "standardCarrierAlphaCode": "FWDAC",
+  "order": {
+    "mawb": $$
+      .transactionSets[0]
+      .heading
+      .business_instructions_and_reference_number_L11[reference_identification_qualifier_02 = "MB"]
+      .reference_identification_01,
+    "secondaryRefNumber": $$.transactionSets[0].heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.shipment_identification_number_03,
+    "deadlineDate": $$.transactionSets[0].heading.date_time_G62[0].date_02,
+    "paymentMethod": $lookupTable(
+      $tables.PAYMENT_METHOD,
+      "Key",
+      $$.transactionSets[0].heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.shipment_method_of_payment_02
+    )
+      .Value,
+    "pickupOrDelivery": $lookupTable(
+      $tables.PICKUP_OR_DELIVERY,
+      "Key",
+      $$.transactionSets[0].heading.bill_of_lading_handling_requirements_AT5[0].special_handling_code_01
+    )
+      .Value,
+    "endStop": {
+      "specialInstructions": $reduce(
+        $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
+        function(
+          $specialInstructions,
+          $value
+        ) {
+          $value.reference_identification_qualifier_02 = "SI" ? $specialInstructions & $value.reference_identification_01 : $specialInstructions
+        },
+        ""
+      )
+    },
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": $$
+        .transactionSets[0]
+        .heading
+        .beginning_segment_for_the_motor_carrier_bill_of_lading_BOL
+        .shipment_identification_number_03
+    }
+  },
+  "consigneeInformation": (
+    $__TYPE__ := "OBJECT_UNARY_CONTEXT_BLOCK";
+    $__CONTEXT__ := $$.transactionSets[0].heading.name_N1_loop_consignee;
+    $__CONTEXT__ = $omitField
+      ? $omitField
+      : $__CONTEXT__
+        .{
+          "name": name_N1.name_02,
+          "addressLine1": address_information_N3[0].address_information_01,
+          "addressLine2": address_information_N3[0].address_information_02,
+          "city": geographic_location_N4.city_name_01,
+          "state": geographic_location_N4.state_or_province_code_02,
+          "zip": geographic_location_N4.postal_code_03,
+          "country": geographic_location_N4.country_code_04,
+          "contactName": contact_G61[0].name_02,
+          "contactPhone": contact_G61[0].communication_number_04
+        }
+  ),
+  "shipperInformation": (
+    $__TYPE__ := "OBJECT_UNARY_CONTEXT_BLOCK";
+    $__CONTEXT__ := $$.transactionSets[0].heading.name_N1_loop_shipper;
+    $__CONTEXT__ = $omitField
+      ? $omitField
+      : $__CONTEXT__
+        .{
+          "name": name_N1.name_02,
+          "addressLine1": address_information_N3[0].address_information_01,
+          "addressLine2": address_information_N3[0].address_information_02,
+          "city": geographic_location_N4.city_name_01,
+          "state": geographic_location_N4.state_or_province_code_02,
+          "zip": geographic_location_N4.postal_code_03,
+          "country": geographic_location_N4.country_code_04,
+          "contactName": contact_G61[0].name_02,
+          "contactPhone": contact_G61[0].communication_number_04
+        }
+  ),
+  "packages": (
+    $__TYPE__ := "LIST_CONTEXT_BLOCK";
+    $__CONTEXT__ := $$
+      .transactionSets[0]
+      .detail
+      .bill_of_lading_line_item_number_AT1_loop
+      .business_instructions_and_reference_number_L11[reference_identification_qualifier_02 = "ZZ"]
+      ? $$
+        .transactionSets[0]
+        .detail
+        .bill_of_lading_line_item_number_AT1_loop
+        .business_instructions_and_reference_number_L11[reference_identification_qualifier_02 = "ZZ"]
+      : $;
+    $__CONTEXT__ = $omitField
+      ? $omitField
+      : ($$
+        .transactionSets[0]
+        .detail
+        .bill_of_lading_line_item_number_AT1_loop
+        .business_instructions_and_reference_number_L11[reference_identification_qualifier_02 = "ZZ"]
+        ? $$
+          .transactionSets[0]
+          .detail
+          .bill_of_lading_line_item_number_AT1_loop
+          .business_instructions_and_reference_number_L11[reference_identification_qualifier_02 = "ZZ"]
+        : $)
+        .($ = $omitArrayItem
+          ? $omitArrayItem
+          : {
+            "description": $$
+              .transactionSets[0]
+              .detail
+              .bill_of_lading_line_item_number_AT1_loop[0]
+              .bill_of_lading_description_AT4[0]
+              .lading_description_01,
+            "weight": $round(
+              $number($$
+                .transactionSets[0]
+                .detail
+                .bill_of_lading_line_item_number_AT1_loop[0]
+                .bill_of_lading_line_item_detail_AT2_loop[0]
+                .bill_of_lading_line_item_detail_AT2
+                .weight_05
+                / $$
+                  .transactionSets[0]
+                  .detail
+                  .bill_of_lading_line_item_number_AT1_loop[0]
+                  .bill_of_lading_line_item_detail_AT2_loop[0]
+                  .bill_of_lading_line_item_detail_AT2
+                  .lading_quantity_01),
+              2
+            ),
+            "quantity": $number($match($.reference_identification_01, /P(\d+)/).groups[0]),
+            "length": $number($match($.reference_identification_01, /L(\d+)/).groups[0]),
+            "width": $number($match($.reference_identification_01, /W(\d+)/).groups[0]),
+            "height": $number($match($.reference_identification_01, /H(\d+)/).groups[0]),
+            "packageType": $$
+              .transactionSets[0]
+              .detail
+              .bill_of_lading_line_item_number_AT1_loop[0]
+              .bill_of_lading_line_item_detail_AT2_loop[0]
+              .bill_of_lading_line_item_detail_AT2
+              .packaging_form_code_02,
+            "class": undefined
+          })[]
+  )
+}

@@ -439,7 +439,7 @@ describe('toJedi997', () => {
 describe('toJedi211', () => {
   const parser = new X12Parser();
 
-  it('should parse a real 211 BOL EDI file into a JediDocument', () => {
+  it('should parse a real 211 BOL EDI file into Stedi-compatible format', () => {
     const rawEdi = readFileSync(resolve(fixturesDir, 'edi/sample_211.edi'), 'utf-8');
     const parseResult = parser.parse(rawEdi);
     expect(parseResult.success).toBe(true);
@@ -449,59 +449,49 @@ describe('toJedi211', () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
 
-    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
-      heading: {
-        transaction_set_header_ST: { ST_01_TransactionSetIdentifierCode: string };
-        bill_of_lading_BOL: {
-          BOL_01_StandardCarrierAlphaCode: string;
-          BOL_02_ShipmentMethodOfPayment: string;
-          BOL_03_ShipmentIdentificationNumber: string;
-          BOL_04_Date?: string;
-          BOL_05_Time?: string;
-          BOL_06_ReferenceIdentification?: string;
-        };
-        set_purpose_B2A?: { B2A_01_TransactionSetPurposeCode: string };
-        reference_identification_L11?: Array<{ L11_01_ReferenceIdentification: string; L11_02_ReferenceIdentificationQualifier: string }>;
-        date_time_reference_G62?: Array<Record<string, string>>;
-        party_identification_loop_N1?: Array<{
-          name_N1: { N1_01_EntityIdentifierCode: string; N1_02_Name?: string };
-          contact_G61?: { G61_04_CommunicationNumber?: string };
-        }>;
-      };
-      detail: { line_items: Array<Record<string, unknown>> };
-      summary?: { transaction_set_trailer_SE: { SE_01_NumberOfIncludedSegments: string } };
-    };
+    const doc = result.output as import('../types/jedi').Jedi211;
 
-    // Header
-    expect(ts.heading.transaction_set_header_ST.ST_01_TransactionSetIdentifierCode).toBe('211');
-    expect(ts.heading.bill_of_lading_BOL.BOL_01_StandardCarrierAlphaCode).toBe('NWKD');
-    expect(ts.heading.bill_of_lading_BOL.BOL_02_ShipmentMethodOfPayment).toBe('CC');
-    expect(ts.heading.bill_of_lading_BOL.BOL_03_ShipmentIdentificationNumber).toBe('BNA-472-95777450-00');
-    expect(ts.heading.bill_of_lading_BOL.BOL_04_Date).toBe('20260324');
-    expect(ts.heading.bill_of_lading_BOL.BOL_06_ReferenceIdentification).toBe('SMF');
+    // Envelope
+    expect(doc.envelope.interchangeHeader.senderId).toBe('FWDA');
+    expect(doc.envelope.interchangeHeader.receiverId).toBe('NWKD');
+
+    const ts = doc.transactionSets[0];
+
+    // Header — ST
+    expect(ts.heading.transaction_set_header_ST.transaction_set_identifier_code_01).toBe('211');
+
+    // BOL
+    expect(ts.heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.standard_carrier_alpha_code_01).toBe('NWKD');
+    expect(ts.heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.shipment_method_of_payment_02).toBe('CC');
+    expect(ts.heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.shipment_identification_number_03).toBe('BNA-472-95777450-00');
+    expect(ts.heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.date_04).toBe('20260324');
+    expect(ts.heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.reference_identification_06).toBe('SMF');
 
     // B2A
-    expect(ts.heading.set_purpose_B2A?.B2A_01_TransactionSetPurposeCode).toBe('04');
+    expect(ts.heading.set_purpose_B2A?.transaction_set_purpose_code_01).toBe('04');
 
-    // L11 references
-    expect(ts.heading.reference_identification_L11?.length).toBeGreaterThanOrEqual(7);
-    const crRef = ts.heading.reference_identification_L11?.find((l) => l.L11_02_ReferenceIdentificationQualifier === 'CR');
-    expect(crRef?.L11_01_ReferenceIdentification).toBe('12345');
+    // L11 references (Stedi name: business_instructions_and_reference_number_L11)
+    const l11s = ts.heading.business_instructions_and_reference_number_L11;
+    expect(l11s?.length).toBeGreaterThanOrEqual(7);
+    const crRef = l11s?.find((l) => l.reference_identification_qualifier_02 === 'CR');
+    expect(crRef?.reference_identification_01).toBe('12345');
 
-    // N1 loops with G61 contacts
-    expect(ts.heading.party_identification_loop_N1?.length).toBe(2);
-    const shipper = ts.heading.party_identification_loop_N1?.find((n) => n.name_N1.N1_01_EntityIdentifierCode === 'SH');
-    expect(shipper?.name_N1.N1_02_Name).toBe('SHIPPER CORP');
-    expect(shipper?.contact_G61?.G61_04_CommunicationNumber).toBe('6155551234');
+    // N1 loops keyed by role
+    const heading = ts.heading as Record<string, unknown>;
+    const shipper = heading.name_N1_loop_shipper as import('../types/jedi').StediN1Loop;
+    expect(shipper).toBeDefined();
+    expect(shipper.name_N1.name_02).toBe('SHIPPER CORP');
+    expect(shipper.contact_G61?.[0]?.communication_number_04).toBe('6155551234');
 
-    const consignee = ts.heading.party_identification_loop_N1?.find((n) => n.name_N1.N1_01_EntityIdentifierCode === 'CN');
-    expect(consignee?.name_N1.N1_02_Name).toBe('CONSIGNEE LLC');
+    const consignee = heading.name_N1_loop_consignee as import('../types/jedi').StediN1Loop;
+    expect(consignee).toBeDefined();
+    expect(consignee.name_N1.name_02).toBe('CONSIGNEE LLC');
 
-    // Line items
-    expect(ts.detail.line_items.length).toBe(1);
+    // Detail — AT1 loop
+    expect(ts.detail.bill_of_lading_line_item_number_AT1_loop?.length).toBe(1);
 
     // Summary
-    expect(ts.summary?.transaction_set_trailer_SE.SE_01_NumberOfIncludedSegments).toBe('22');
+    expect(ts.summary?.transaction_set_trailer_SE.number_of_included_segments_01).toBe('22');
   });
 
   it('should fail when BOL segment is missing', () => {
@@ -538,12 +528,10 @@ describe('toJedi211', () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
 
-    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
-      heading: { bill_of_lading_BOL: { BOL_03_ShipmentIdentificationNumber: string } };
-      detail: { line_items: unknown[] };
-    };
-    expect(ts.heading.bill_of_lading_BOL.BOL_03_ShipmentIdentificationNumber).toBe('PRO123');
-    expect(ts.detail.line_items).toHaveLength(0);
+    const doc = result.output as import('../types/jedi').Jedi211;
+    const ts = doc.transactionSets[0];
+    expect(ts.heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.shipment_identification_number_03).toBe('PRO123');
+    expect(ts.detail.bill_of_lading_line_item_number_AT1_loop).toBeUndefined();
   });
 });
 
@@ -574,10 +562,9 @@ describe('toJedi (router)', () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
 
-    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
-      heading: { bill_of_lading_BOL: Record<string, unknown> };
-    };
-    expect(ts.heading.bill_of_lading_BOL).toBeDefined();
+    const doc = result.output as import('../types/jedi').Jedi211;
+    expect(doc.transactionSets[0].heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL).toBeDefined();
+    expect(doc.envelope.interchangeHeader.senderId).toBe('FWDA');
   });
 
   it('should route 997 to toJedi997', () => {
@@ -587,5 +574,49 @@ describe('toJedi (router)', () => {
 
     const result = toJedi(parsed.data);
     expect(result.success).toBe(true);
+  });
+});
+
+describe('Stedi mapping compatibility', () => {
+  const parser = new X12Parser();
+
+  it('should evaluate the real Forward Air 211 INBOUND mapping without errors', async () => {
+    const rawEdi = readFileSync(resolve(fixturesDir, 'edi/sample_211.edi'), 'utf-8');
+    const mappingExpr = readFileSync(resolve(fixturesDir, 'jedi/fwd_air_211_mapping.jsonata'), 'utf-8');
+
+    const parseResult = parser.parse(rawEdi);
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+
+    const jediResult = toJedi211(parseResult.data);
+    expect(jediResult.success).toBe(true);
+    if (!jediResult.success) return;
+
+    const { JsonataEvaluator } = await import('../evaluator/jsonata-evaluator');
+    const evaluator = new JsonataEvaluator();
+    const mapResult = await evaluator.evaluate<Record<string, unknown>>(mappingExpr, jediResult.output);
+
+    // Should evaluate without "Attempted to invoke a non-function" or other errors
+    if (!mapResult.success) {
+      expect.fail(`Mapping failed: ${mapResult.error}`);
+    }
+    expect(mapResult.success).toBe(true);
+
+    // Verify key fields were extracted from the JEDI output
+    expect(mapResult.output.receiverId).toBe('NWKD');
+    expect(mapResult.output.transactionSetIdentifierCode).toBe('211');
+    expect(typeof mapResult.output.order).toBe('object');
+    const order = mapResult.output.order as Record<string, unknown>;
+    expect(order.secondaryRefNumber).toBe('BNA-472-95777450-00');
+    expect(order.mawb).toBe('BNA-472-95777450-00');
+
+    // Consignee and shipper should be populated from N1 loops
+    expect(mapResult.output.consigneeInformation).toBeDefined();
+    expect(mapResult.output.shipperInformation).toBeDefined();
+    const consignee = mapResult.output.consigneeInformation as Record<string, unknown>;
+    expect(consignee.name).toBe('CONSIGNEE LLC');
+    expect(consignee.contactPhone).toBe('9165559876');
+    const shipper = mapResult.output.shipperInformation as Record<string, unknown>;
+    expect(shipper.name).toBe('SHIPPER CORP');
   });
 });

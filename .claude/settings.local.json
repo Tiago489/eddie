@@ -66,7 +66,8 @@
       "Bash(timeout 12 curl -s -w \"\\\\nHTTP:%{http_code} TIME:%{time_total}s\" -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/partnerships?pageSize=1\")",
       "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings?page_size=100\")",
       "Bash(timeout 120 tsx scripts/stedi-import.ts --resource=mappings)",
-      "Bash(pnpm --filter @edi-platform/api add @fastify/cors)"
+      "Bash(pnpm --filter @edi-platform/api add @fastify/cors)",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings/01JSCJRTBF3A3A45XJAV8FCXXJ\")"
     ]
   },
   "hooks": {
