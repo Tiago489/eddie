@@ -7,7 +7,7 @@ let container: import('@testcontainers/postgresql').StartedPostgreSqlContainer;
 let orgId: string;
 let dockerAvailable = true;
 
-describe('stedi-migrate', { timeout: 60000 }, () => {
+describe('stedi-import', { timeout: 60000 }, () => {
   beforeAll(async () => {
     try {
       const { PostgreSqlContainer } = await import('@testcontainers/postgresql');
@@ -47,14 +47,14 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
 
   describe('validateJsonata (pure unit tests)', () => {
     it('should return valid for correct JSONata expressions', async () => {
-      const { validateJsonata } = await import('./stedi-migrate');
+      const { validateJsonata } = await import('./stedi-import');
       expect(validateJsonata('$$').valid).toBe(true);
       expect(validateJsonata('name').valid).toBe(true);
       expect(validateJsonata('{ "id": shipmentId }').valid).toBe(true);
     });
 
     it('should return invalid for bad JSONata expressions', async () => {
-      const { validateJsonata } = await import('./stedi-migrate');
+      const { validateJsonata } = await import('./stedi-import');
       const result = validateJsonata('$invalid$$(');
       expect(result.valid).toBe(false);
       expect(result.error).toBeTruthy();
@@ -63,12 +63,12 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
 
   describe('validateJediShape (pure unit tests)', () => {
     it('should accept valid JediDocument shape', async () => {
-      const { validateJediShape } = await import('./stedi-migrate');
+      const { validateJediShape } = await import('./stedi-import');
       expect(validateJediShape({ interchanges: [] })).toBe(true);
     });
 
     it('should reject invalid shapes', async () => {
-      const { validateJediShape } = await import('./stedi-migrate');
+      const { validateJediShape } = await import('./stedi-import');
       expect(validateJediShape(null)).toBe(false);
       expect(validateJediShape({})).toBe(false);
       expect(validateJediShape('string')).toBe(false);
@@ -76,7 +76,7 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
   });
 
   describe('buildReport (integration)', () => {
-    it('should flag mappings without stediGuideId as NEEDS_MIGRATION', async () => {
+    it('should flag mappings without guideId as NEEDS_MIGRATION', async () => {
       if (!dockerAvailable) return;
 
       await prisma.mapping.create({
@@ -91,7 +91,7 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
         },
       });
 
-      const { buildReport } = await import('./stedi-migrate');
+      const { buildReport } = await import('./stedi-import');
       const report = await buildReport();
       const mapping = report.mappings.find((m) => m.name === 'Unmigrated');
       expect(mapping?.status).toBe('NEEDS_MIGRATION');
@@ -113,7 +113,7 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
         },
       });
 
-      const { buildReport } = await import('./stedi-migrate');
+      const { buildReport } = await import('./stedi-import');
       const report = await buildReport();
       const mapping = report.mappings.find((m) => m.name === 'Bad');
       expect(mapping?.status).toBe('INVALID');
@@ -121,7 +121,7 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
   });
 
   describe('execute (integration)', () => {
-    it('should apply stediGuideId and create MigrationRun', async () => {
+    it('should apply guideId and create ImportRun', async () => {
       if (!dockerAvailable) return;
 
       const mapping = await prisma.mapping.create({
@@ -136,13 +136,13 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
         },
       });
 
-      const { buildReport, execute } = await import('./stedi-migrate');
+      const { buildReport, execute } = await import('./stedi-import');
       const report = await buildReport();
       const result = await execute(report);
       expect(result).toContain('Migration complete');
 
       const updated = await prisma.mapping.findUnique({ where: { id: mapping.id } });
-      expect(updated?.stediGuideId).toBe('guide_edi_990_outbound_v2');
+      expect(updated?.guideId).toBe('guide_edi_990_outbound_v2');
 
       const runs = await prisma.migrationRun.findMany();
       expect(runs).toHaveLength(1);
@@ -151,7 +151,7 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
   });
 
   describe('rollback (integration)', () => {
-    it('should restore previous stediGuideId values', async () => {
+    it('should restore guideId to null on rollback', async () => {
       if (!dockerAvailable) return;
 
       const mapping = await prisma.mapping.create({
@@ -166,18 +166,18 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
         },
       });
 
-      const { buildReport, execute, rollback } = await import('./stedi-migrate');
+      const { buildReport, execute, rollback } = await import('./stedi-import');
       const report = await buildReport();
       await execute(report);
 
       const migrated = await prisma.mapping.findUnique({ where: { id: mapping.id } });
-      expect(migrated?.stediGuideId).toBe('guide_edi_214_outbound_v1');
+      expect(migrated?.guideId).toBe('guide_edi_214_outbound_v1');
 
       const result = await rollback(false);
       expect(result).toContain('Rollback complete');
 
       const restored = await prisma.mapping.findUnique({ where: { id: mapping.id } });
-      expect(restored?.stediGuideId).toBeNull();
+      expect(restored?.guideId).toBeNull();
 
       const run = await prisma.migrationRun.findFirst({ orderBy: { createdAt: 'desc' } });
       expect(run?.status).toBe('ROLLED_BACK');
@@ -186,7 +186,7 @@ describe('stedi-migrate', { timeout: 60000 }, () => {
     it('should report when no runs exist', async () => {
       if (!dockerAvailable) return;
 
-      const { rollback } = await import('./stedi-migrate');
+      const { rollback } = await import('./stedi-import');
       const result = await rollback(false);
       expect(result).toContain('No completed migration runs found');
     });

@@ -70,7 +70,7 @@ model Mapping {
   transactionSet     TransactionSet
   direction          MappingDirection
   jsonataExpression  String         @db.Text
-  stediGuideId       String?
+  guideId            String?
   version            Int            @default(1)
   isActive           Boolean        @default(true)
   createdAt          DateTime       @default(now())

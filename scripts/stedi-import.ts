@@ -64,12 +64,12 @@ async function buildReport(): Promise<MigrationReport> {
         reason: `Invalid JSONata expression: ${jsonataResult.error}`,
       });
       invalid++;
-    } else if (!m.stediGuideId) {
+    } else if (!m.guideId) {
       mappingReports.push({
         id: m.id,
         name: m.name,
         status: 'NEEDS_MIGRATION',
-        reason: 'Missing stediGuideId',
+        reason: 'Missing guideId',
         previousValue: null,
         newValue: `guide_${m.transactionSet.toLowerCase()}_${m.direction.toLowerCase()}_v${m.version}`,
       });
@@ -117,7 +117,7 @@ async function execute(report: MigrationReport): Promise<string> {
     for (const m of toMigrate) {
       await tx.mapping.update({
         where: { id: m.id },
-        data: { stediGuideId: m.newValue as string },
+        data: { guideId: m.newValue as string },
       });
     }
 
@@ -147,7 +147,7 @@ async function rollback(dryRun: boolean): Promise<string> {
 
   console.log(`\nRolling back MigrationRun ${lastRun.id}:`);
   for (const m of toRollback) {
-    console.log(`  ${m.id}: stediGuideId "${m.newValue}" → null`);
+    console.log(`  ${m.id}: guideId "${m.newValue}" → null`);
   }
 
   if (dryRun) return 'Dry run — no changes made. Pass --execute to confirm rollback.';
@@ -156,7 +156,7 @@ async function rollback(dryRun: boolean): Promise<string> {
     for (const m of toRollback) {
       await tx.mapping.update({
         where: { id: m.id },
-        data: { stediGuideId: null },
+        data: { guideId: null },
       });
     }
 
@@ -181,8 +181,8 @@ async function main() {
     return;
   }
 
-  console.log('Stedi Migration Report');
-  console.log('======================\n');
+  console.log('Stedi Import Report');
+  console.log('===================\n');
 
   const report = await buildReport();
 
@@ -190,7 +190,7 @@ async function main() {
   for (const m of report.mappings) {
     const icon = m.status === 'OK' ? 'OK' : m.status === 'NEEDS_MIGRATION' ? 'MIGRATE' : 'INVALID';
     console.log(`  [${icon}] ${m.name} (${m.id}): ${m.reason}`);
-    if (m.newValue) console.log(`         → stediGuideId: ${m.newValue}`);
+    if (m.newValue) console.log(`         → guideId: ${m.newValue}`);
   }
 
   if (report.transactions.length > 0) {
@@ -223,7 +223,7 @@ async function main() {
 export { buildReport, execute, rollback, validateJsonata, validateJediShape, prisma as _prisma };
 
 // Only run main() when executed directly, not when imported by tests
-const isDirectRun = process.argv[1]?.includes('stedi-migrate') && !process.argv[1]?.includes('vitest');
+const isDirectRun = process.argv[1]?.includes('stedi-import') && !process.argv[1]?.includes('vitest');
 if (isDirectRun) {
   main().catch((e) => {
     console.error('Migration failed:', e);
