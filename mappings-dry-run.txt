@@ -1,0 +1,44 @@
+
+> edi-platform@ import:stedi /home/tiago/Projects/Eddie
+> tsx scripts/stedi-import.ts --resource=mappings
+
+Fetching mappings...
+Fetching mappings... done (25 mappings)
+Fetching mapping details... (2/25)Fetching mapping details... (4/25)Fetching mapping details... (7/25)Fetching mapping details... (8/25)Fetching mapping details... (9/25)Fetching mapping details... (10/25)Fetching mapping details... (11/25)Fetching mapping details... (12/25)Fetching mapping details... (14/25)Fetching mapping details... (16/25)Fetching mapping details... (17/25)Fetching mapping details... (21/25)Fetching mapping details... (23/25)Fetching mapping details... (24/25)Fetching mapping details... (25/25)Fetching mapping details... done (15 mappings)
+Stedi Import Plan
+=================
+
+Trading Partners: 0
+
+Guides: 0
+
+Mappings: 15
+  [UPSERT] [DHL] Outbound EDI 210 v2 (EDI_210 OUTBOUND, guide: LIVE_01HC6K7696VJ4KT2HH7DP22G0W)
+  [UPSERT] [DHL for Special Services] 210 OUTBOUND (EDI_210 OUTBOUND, guide: LIVE_01HC6K7696VJ4KT2HH7DP22G0W)
+  [UPSERT] [P44] 214 OUTBOUND (EDI_214 OUTBOUND, guide: LIVE_01JYEN1A3SM3V6PGC9C1FT0WFA)
+  [UPSERT] [Pilot for fireball] EDI 211 v4010 INBOUND (EDI_211 INBOUND, guide: LIVE_01HVV9C86FP60EHMJX347CA485)
+  [UPSERT] [Scan Global for Willow Express] 211 INBOUND (EDI_211 INBOUND, guide: LIVE_01HB94VGTPK404XDAC500KM86N)
+  [UPSERT] [SEKO - PICKUP AND DELIVERY] 211 Inbound -- Pallet Prive Guide (EDI_211 INBOUND, guide: LIVE_01HP5MCQ4FM5VTG8TB8QS8CQH7)
+  [UPSERT] [Platinum Cargo Logistics] 204 Inbound (EDI_204 INBOUND, guide: LIVE_01JSKH4G5BWT0VPYZG3QWXRBV2)
+  [UPSERT] [WatchPoint-BLKOUT] 210 Outbound - Pallet Guide (EDI_210 OUTBOUND, guide: LIVE_01GYJR6VXQBP6BMWQT3CQ46KFP)
+  [UPSERT] [Forward Air for RC Transfer] 211 (pickups and deliveries) INBOUND (EDI_211 INBOUND, guide: LIVE_01H2ZD40X8DZGD6B5YA43PHFNH)
+  [UPSERT] [Wayfair] 214 OUTBOUND (EDI_214 OUTBOUND, guide: LIVE_01JS06GRN24SQ4RZFWTZE3CWMF)
+  [UPSERT] [Willow Express] 214 OUTBOUND - Pallet Guide (EDI_214 OUTBOUND, guide: LIVE_01JS4E5ZR0T5Y9SXSKXM8385SZ)
+  [UPSERT] [Averitt] 204 Inbound (EDI_204 INBOUND, guide: LIVE_01JRJ4S3QWPXW5FVVBQA06XQVF)
+  [UPSERT] [ArcBest] 211 INBOUND (Motor Carrier Bill of Lading) (EDI_211 INBOUND, guide: LIVE_01JQVFFZM96VWTVPSV046GCG6P)
+  [UPSERT] [RyanExpress Robinson] EDI 214 OUTBOUND (EDI_214 OUTBOUND, guide: LIVE_01JQTQSWBDQW9QHDA2GNNP2JB9)
+  [UPSERT] [ArcBest] EDI 214 OUTBOUND (EDI_214 OUTBOUND, guide: LIVE_01JQY4PHWSTDQS17BAV05ER3FA)
+
+Errors: 10
+  [ERROR] mapping 01KMN6RFA7TZC6FXX3F6NBQZJ8: Could not detect direction from name: "[Forward Air Complete for SL] 211 - Packages fix"
+  [ERROR] mapping 01KAXRV13NAY8T33AGZGHFTYEK: Could not detect direction from name: "[Skyworks] EDI 214"
+  [ERROR] mapping 01K2YQ67584RR79NC3HEFBCZJB: Could not detect direction from name: "[TeamWW] EDI 204 to Order JSON"
+  [ERROR] mapping 01JZ8956FMMD6FXSZC700Y6PZP: Could not detect direction from name: "[ALLSTATES] EDI 204 to Order JSON"
+  [ERROR] mapping 01JSEJF68608YDNK3PH4KGDJ0R: Could not detect direction from name: "[Pegasus] EDI 214 v4010"
+  [ERROR] mapping 01JS28XTKGZSDDGNV9HBYSWG8N: Could not detect direction from name: "[Platinum Cargo Logistics] EDI 214 v4010"
+  [ERROR] mapping 01JRWH9MM23JYYNPRXTXAQB14E: Could not detect direction from name: "[Averitt] EDI 210 v4010"
+  [ERROR] mapping 01JRTM43QYBENC5BDSX60FQV16: Could not detect direction from name: "[Averitt] EDI 214 v4010"
+  [ERROR] mapping 01JRJKPNR4CZS50P77B2GYRY95: Could not detect direction from name: "[Watchpoint] EDI 211 to Order JSON"
+  [ERROR] mapping 01JQXZPC4JB1JW9R3MYH23C39X: Could not detect direction from name: "[CEVA-IBM for Sierra Airfreight] EDI 204 to Order JSON"
+
+Dry run — no changes made. Pass --execute to apply.

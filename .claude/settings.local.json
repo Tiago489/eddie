@@ -34,7 +34,54 @@
       "Bash(DOCKER_BUILDKIT=1 docker build --network=host --dns=8.8.8.8 -f apps/worker/Dockerfile -t eddie-worker .)",
       "Bash(DOCKER_BUILDKIT=1 docker build --network=host -f apps/web/Dockerfile -t eddie-web --build-arg NEXT_PUBLIC_API_URL=http://localhost:3001 --build-arg NEXT_PUBLIC_ORG_ID=test-org .)",
       "Bash(DOCKER_BUILDKIT=1 docker build --no-cache --network=host -f apps/api/Dockerfile -t eddie-prod-api .)",
-      "Bash(DOCKER_BUILDKIT=1 docker build --network=host -f apps/api/Dockerfile -t eddie-prod-api:latest .)"
+      "Bash(DOCKER_BUILDKIT=1 docker build --network=host -f apps/api/Dockerfile -t eddie-prod-api:latest .)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(source apps/api/.env)",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/connections/01HAN731C0MJYDJTXER19NDTPR\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/transactions?partnershipId=wisechoice_rl-carriers&pageSize=1\")",
+      "Bash(python3 -c \":*)",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/partnerships/wisechoice_rl-carriers/transaction-settings/01GYG2QT5YNHD3J5PCQ6HZJY11\")",
+      "WebFetch(domain:www.stedi.com)",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/profiles/rl-carriers/x12\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/partnerships/wisechoice_rl-carriers?include=transactionSettings\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://guides.us.stedi.com/2023-08-01/guides\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://guide.us.stedi.com/2023-08-01/guides\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/guides\")",
+      "Bash(curl -v --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://guide.us.stedi.com/2023-08-01/guides\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://guides.us.stedi.com/2021-06-01/guides\")",
+      "Bash(curl -v --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://guides.us.stedi.com/2021-06-01/guides\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://guides.us.stedi.com/2024-07-01/guides\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/partnerships?pageSize=100\")",
+      "Bash(ls /home/tiago/Projects/Eddie/node_modules/.pnpm/msw@*/node_modules/msw/package.json)",
+      "Bash(pnpm import:stedi)",
+      "Bash(npx tsx:*)",
+      "Bash(timeout 15 tsx scripts/stedi-import.ts)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(timeout 5 tsx -e \"import { PrismaClient } from ''../packages/db/src/index''; console.log\\(''OK:'', typeof PrismaClient\\)\")",
+      "Bash(timeout 5 tsx -e \"const { PrismaClient } = require\\(''../packages/db/node_modules/@prisma/client''\\); console.log\\(''OK:'', typeof PrismaClient\\)\")",
+      "Bash(timeout 20 tsx scripts/stedi-import.ts)",
+      "Bash(timeout 12 curl -s -w \"\\\\nHTTP:%{http_code} TIME:%{time_total}s\" -H \"Authorization: Key $STEDI_API_KEY\" \"https://core.us.stedi.com/2023-08-01/partnerships?pageSize=1\")",
+      "Bash(curl -s --max-time 10 -H \"Authorization: Key $STEDI_API_KEY\" \"https://mappings.us.stedi.com/2021-06-01/mappings?page_size=100\")",
+      "Bash(timeout 120 tsx scripts/stedi-import.ts --resource=mappings)",
+      "Bash(pnpm --filter @edi-platform/api add @fastify/cors)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import sys,json; d=json.load(sys.stdin); f=d.get('tool_input',{}).get('file_path','') or d.get('tool_response',{}).get('filePath',''); exit(0 if f.endswith(('.ts','.tsx','.js','.jsx')) and '__tests__' not in f and '.test.' not in f else 1)\" && cd /home/tiago/Projects/Eddie && pnpm test --silent 2>&1 | tail -5",
+            "timeout": 300,
+            "statusMessage": "Running tests..."
+          }
+        ]
+      }
     ]
   }
 }

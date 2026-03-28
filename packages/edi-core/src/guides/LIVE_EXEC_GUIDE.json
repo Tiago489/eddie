@@ -1,0 +1,8 @@
+{
+  "guideId": "LIVE_EXEC_GUIDE",
+  "name": "Exec Guide",
+  "transactionSet": "204",
+  "direction": "INBOUND",
+  "sourceMappingId": "map-exec",
+  "sourceMappingName": "Exec Mapping"
+}

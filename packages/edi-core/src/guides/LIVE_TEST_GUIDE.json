@@ -1,0 +1,8 @@
+{
+  "guideId": "LIVE_TEST_GUIDE",
+  "name": "Test Guide",
+  "transactionSet": "214",
+  "direction": "OUTBOUND",
+  "sourceMappingId": "map-002",
+  "sourceMappingName": "Test Mapping"
+}

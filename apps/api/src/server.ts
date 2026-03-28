@@ -32,6 +32,11 @@ export function buildApp(opts?: AppOptions): FastifyInstance {
     app.decorate('queues', opts.queues);
   }
 
+  app.register(import('@fastify/cors'), {
+    origin: ['http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  });
+
   app.get('/health', async () => ({
     status: 'ok',
     timestamp: new Date().toISOString(),
