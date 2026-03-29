@@ -102,9 +102,8 @@ describe('TMS schema derivation', () => {
 // If this test fails, a fixture was added/changed that shifted the required fields.
 // Review the diff: if the new fields are correct, update the snapshot below.
 describe('TMS schema drift sentinel', () => {
-  // These are the fields present in 100% of passing Stedi ground-truth fixtures
-  // as of 2026-03-28 (3 fixtures: brbf-211, jnel-211, srwj-211).
-  // Update this list ONLY after reviewing that the change is intentional.
+  // Fields present in 100% of passing fixtures (6 fixtures: 3x 211, 3x 204).
+  // Updated 2026-03-28: added 204 fixtures, narrowed required set.
   const SNAPSHOT_REQUIRED = [
     'consigneeInformation',
     'consigneeInformation.addressLine1',
@@ -117,7 +116,6 @@ describe('TMS schema drift sentinel', () => {
     'order.deadlineDate',
     'order.endStop',
     'order.endStop.specialInstructions',
-    'order.mawb',
     'order.paymentMethod',
     'order.pickupOrDelivery',
     'order.secondaryRefNumber',
@@ -125,19 +123,13 @@ describe('TMS schema drift sentinel', () => {
     'order.standardOrderFields.shipperBillOfLadingNumber',
     'packages',
     'packages[].description',
-    'packages[].height',
-    'packages[].length',
-    'packages[].packageType',
     'packages[].quantity',
-    'packages[].weight',
-    'packages[].width',
     'receiverId',
     'senderId',
     'shipperInformation',
     'shipperInformation.addressLine1',
     'shipperInformation.city',
     'shipperInformation.contactName',
-    'shipperInformation.contactPhone',
     'shipperInformation.country',
     'shipperInformation.name',
     'shipperInformation.state',
@@ -149,10 +141,23 @@ describe('TMS schema drift sentinel', () => {
   ];
 
   const SNAPSHOT_OPTIONAL = [
+    'applicationSenderCode',
     'consigneeInformation.addressLine2',
     'consigneeInformation.contactName',
     'consigneeInformation.contactPhone',
+    'order.equipmentType',
+    'order.mawb',
+    'order.quaternaryRefNumber',
+    'order.quinaryRefNumber',
+    'order.tertiaryRefNumber',
+    'packages[].height',
+    'packages[].length',
+    'packages[].packageType',
+    'packages[].weight',
+    'packages[].width',
+    'senderContactCode',
     'shipperInformation.addressLine2',
+    'shipperInformation.contactPhone',
   ];
 
   it('required fields should match snapshot (update if intentional)', () => {

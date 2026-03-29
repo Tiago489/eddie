@@ -1,7 +1,7 @@
 export { JsonataEvaluator } from './evaluator/jsonata-evaluator';
 export { getDefaultTables, mergeTables, learnFromFixture, addEntries } from './evaluator/stedi-lookup-tables';
 export type { LookupEntry, LookupTableSet } from './evaluator/stedi-lookup-tables';
-export { toJedi204, toJedi211, toJedi214, toJedi997, toJedi } from './transforms/to-jedi';
+export { toJedi204, toStedi204, toJedi211, toJedi214, toJedi997, toJedi } from './transforms/to-jedi';
 export { fromJedi990, fromJedi214, fromJedi210 } from './transforms/from-jedi';
 export { validateTmsOutput } from './output-validator';
 export { defaultTmsSchema, deriveSchemaFromFixtures, refreshTmsSchema } from './tms-schema';

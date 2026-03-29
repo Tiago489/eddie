@@ -1,0 +1,194 @@
+{
+  "senderId": $contains(
+    $$
+      .transactionSets[0]
+      .heading
+      .business_instructions_and_reference_number_L11[reference_identification_qualifier_02 = "IL"]
+      .reference_identification_01,
+    "Transcon"
+  )
+    ? "USOAKIASA-TRANSCON"
+    : "EXPD-NB",
+  "receiverId": $$.envelope.interchangeHeader.receiverId,
+  "applicationSenderCode": $$.envelope.groupHeader.applicationSenderCode,
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "204",
+  "transactionSetPurposeCode": $lookupTable(
+    $tables.PURPOSE_CODES,
+    "Key",
+    $$.transactionSets[0].heading.set_purpose_B2A.transaction_set_purpose_code_01
+  )
+    .Value,
+  "senderContactCode": $contains(
+    $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02,
+    "SSF"
+  )
+    ? $lookupTable($tables.CONTACT_CODES, "Key", $$.transactionSets[0].heading.`L11 - KU`.reference_identification_01).Value
+    : $contains($$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02, "REV")
+      ? $lookupTable($tables.CONTACT_CODES, "Key", $$.transactionSets[0].heading.`L11 - IT`.reference_identification_01).Value
+      : "",
+  "standardCarrierAlphaCode": ($contains(
+    $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02,
+    "SSF"
+  )
+    or $contains($$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02, "REV"))
+    ? $lookupTable(
+      $tables.ISA_and_SCAC,
+      "Key",
+      $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02
+    )
+      .Value
+    : $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02,
+  "order": {
+    "secondaryRefNumber": $reduce(
+      $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
+      function(
+        $secondaryRefNumber,
+        $value
+      ) {
+        $value.reference_identification_qualifier_02 = "WO" ? $secondaryRefNumber & $value.reference_identification_01 : $secondaryRefNumber
+      },
+      ""
+    ),
+    "tertiaryRefNumber": $reduce(
+      $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
+      function(
+        $shipperBillOfLadingNumber,
+        $value
+      ) {
+        $value.reference_identification_qualifier_02 = "F8"
+          ? $shipperBillOfLadingNumber & $value.reference_identification_01
+          : $shipperBillOfLadingNumber
+      },
+      ""
+    ),
+    "quaternaryRefNumber": $$.transactionSets[0].heading.`L11 - IT`.reference_identification_01,
+    "quinaryRefNumber": $$.transactionSets[0].heading.`L11 - KU`.reference_identification_01,
+    "paymentMethod": $lookupTable(
+      $tables.PAYMENT_CODES,
+      "Key",
+      $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.shipment_method_of_payment_06
+    )
+      .Value,
+    "pickupOrDelivery": $lookupTable(
+      $tables.DELIVERY_PICKUP,
+      "Key",
+      $$.transactionSets[0].detail.stop_off_details_S5_loop[0].stop_off_details_S5.stop_reason_code_02
+    )
+      .Value,
+    "equipmentType": $$.transactionSets[0].heading.equipment_details_N7_loop[0].equipment_details_N7.equipment_type_22,
+    "endStop": {
+      "specialInstructions": $join($$.transactionSets[0].heading.note_special_instruction_NTE.description_02, " ")
+        & $join($$.transactionSets[0].detail.stop_off_details_S5_loop[1].note_special_instruction_NTE.description_02, " ")
+    },
+    "deadlineDate": $$.transactionSets[0].detail.stop_off_details_S5_loop[0].date_time_G62[0].date_02,
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": $reduce(
+        $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
+        function(
+          $shipperBillOfLadingNumber,
+          $value
+        ) {
+          $value.reference_identification_qualifier_02 = "AW"
+            ? $shipperBillOfLadingNumber & $value.reference_identification_01
+            : $shipperBillOfLadingNumber
+        },
+        ""
+      )
+        ? $reduce(
+          $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
+          function(
+            $shipperBillOfLadingNumber,
+            $value
+          ) {
+            $value.reference_identification_qualifier_02 = "AW"
+              ? $shipperBillOfLadingNumber & $value.reference_identification_01
+              : $shipperBillOfLadingNumber
+          },
+          ""
+        )
+        : $reduce(
+          $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
+          function(
+            $shipperBillOfLadingNumber,
+            $value
+          ) {
+            $value.reference_identification_qualifier_02 = "WO"
+              ? $shipperBillOfLadingNumber & $value.reference_identification_01
+              : $shipperBillOfLadingNumber
+          },
+          ""
+        )
+    }
+  },
+  "shipperInformation": (
+    $__TYPE__ := "OBJECT_UNARY_CONTEXT_BLOCK";
+    $__CONTEXT__ := $$.transactionSets[0].detail.stop_off_details_S5_loop[$exists(name_N1_loop_shipper)].name_N1_loop_shipper;
+    $__CONTEXT__ = $omitField
+      ? $omitField
+      : $__CONTEXT__
+        .{
+          "name": name_N1.name_02,
+          "addressLine1": address_information_N3[0].address_information_01,
+          "addressLine2": address_information_N3[0].address_information_02,
+          "city": geographic_location_N4.city_name_01,
+          "state": geographic_location_N4.state_or_province_code_02,
+          "zip": $substring(geographic_location_N4.postal_code_03, 0, 5),
+          "country": geographic_location_N4.country_code_04,
+          "contactName": contact_G61[0].name_02,
+          "contactPhone": contact_G61[0].communication_number_04
+        }
+  ),
+  "consigneeInformation": (
+    $__TYPE__ := "OBJECT_UNARY_CONTEXT_BLOCK";
+    $__CONTEXT__ := $$.transactionSets[0].detail.stop_off_details_S5_loop[$exists(name_N1_loop_consignee)].name_N1_loop_consignee;
+    $__CONTEXT__ = $omitField
+      ? $omitField
+      : $__CONTEXT__
+        .{
+          "name": name_N1.name_02,
+          "addressLine1": address_information_N3[0].address_information_01,
+          "addressLine2": address_information_N3[0].address_information_02,
+          "city": geographic_location_N4.city_name_01,
+          "state": geographic_location_N4.state_or_province_code_02,
+          "zip": $substring(geographic_location_N4.postal_code_03, 0, 5),
+          "country": geographic_location_N4.country_code_04,
+          "contactName": contact_G61[0].name_02,
+          "contactPhone": contact_G61[0].communication_number_04
+        }
+  ),
+  "packages": (
+    $__TYPE__ := "LIST_CONTEXT_BLOCK";
+    $__CONTEXT__ := $$
+      .transactionSets[0]
+      .detail
+      .stop_off_details_S5_loop[0]
+      .$$
+      .transactionSets[0]
+      .detail
+      .stop_off_details_S5_loop[0]
+      .description_marks_and_numbers_L5_loop;
+    $__CONTEXT__ = $omitField
+      ? $omitField
+      : $$
+        .transactionSets[0]
+        .detail
+        .stop_off_details_S5_loop[0]
+        .$$
+        .transactionSets[0]
+        .detail
+        .stop_off_details_S5_loop[0]
+        .description_marks_and_numbers_L5_loop
+        .($ = $omitArrayItem
+          ? $omitArrayItem
+          : {
+            "description": description_marks_and_numbers_L5.lading_description_02,
+            "weight": $.shipment_weight_packaging_and_quantity_data_AT8.weight_unit_code_02 = "L"
+              ? $.shipment_weight_packaging_and_quantity_data_AT8.weight_03
+              : $round($.shipment_weight_packaging_and_quantity_data_AT8.weight_03 * 2.20462, 2),
+            "quantity": $$.transactionSets[0].detail.stop_off_details_S5_loop[1].stop_off_details_S5.number_of_units_shipped_05,
+            "packageType": undefined,
+            "class": undefined
+          })[]
+  )
+}

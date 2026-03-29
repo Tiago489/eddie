@@ -1,0 +1,51 @@
+{
+  "senderId": "USOAKIASA-TRANSCON",
+  "receiverId": "LDAD",
+  "applicationSenderCode": "EXPD",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "204",
+  "transactionSetPurposeCode": "ORIGINAL",
+  "senderContactCode": "",
+  "standardCarrierAlphaCode": "LDAD",
+  "order": {
+    "secondaryRefNumber": "DJMSPB5297187",
+    "tertiaryRefNumber": "8080337994",
+    "quaternaryRefNumber": "MSP",
+    "quinaryRefNumber": "MIN",
+    "paymentMethod": "PREPAID_BY_SELLER",
+    "pickupOrDelivery": "PICKUP",
+    "equipmentType": "UCU",
+    "endStop": {
+      "specialInstructions": "Deliver To Notes DIMS (in)  4PLT@48X44X65"
+    },
+    "deadlineDate": "2025-08-12",
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "H260196659"
+    }
+  },
+  "shipperInformation": {
+    "name": "FORWARD AIR",
+    "addressLine1": "510 LONE OAK RD",
+    "city": "EAGAN",
+    "state": "MN",
+    "zip": "55121",
+    "country": "US",
+    "contactName": "Unknown"
+  },
+  "consigneeInformation": {
+    "name": "National Vision Inc",
+    "addressLine1": "3400 Energy Drive",
+    "city": "St. Cloud",
+    "state": "MN",
+    "zip": "56304",
+    "country": "US",
+    "contactName": "Yuberqui Madera",
+    "contactPhone": "320-252-6006"
+  },
+  "packages": [
+    {
+      "description": "OPTICAL LENSES",
+      "quantity": 4
+    }
+  ]
+}

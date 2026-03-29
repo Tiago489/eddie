@@ -9,12 +9,12 @@ const SAMPLE_EDI = readFileSync(
 );
 
 const SIMPLE_MAPPING = `{
-  "referenceNumber": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_04_ShipmentIdentificationNumber,
+  "referenceNumber": $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.shipment_identification_number_04,
   "carrier": {
-    "scac": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_02_StandardCarrierAlphaCode
+    "scac": $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02
   },
-  "stops": interchanges[0].functional_groups[0].transaction_sets[0].detail.stop_off_details_loop_S5.{
-    "sequence": stop_off_details_S5.S5_01_StopSequenceNumber
+  "stops": $$.transactionSets[0].detail.stop_off_details_S5_loop.{
+    "sequence": stop_off_details_S5.stop_sequence_number_01
   }
 }`;
 

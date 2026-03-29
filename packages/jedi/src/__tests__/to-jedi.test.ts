@@ -615,7 +615,7 @@ describe('toJedi214', () => {
 describe('toJedi (router)', () => {
   const parser = new X12Parser();
 
-  it('should route 204 to toJedi204', () => {
+  it('should route 204 to toStedi204', () => {
     const edi = readFileSync(resolve(fixturesDir, 'edi/sample_204.edi'), 'utf-8');
     const parsed = parser.parse(edi);
     if (!parsed.success) throw new Error('Parse failed');
@@ -624,10 +624,10 @@ describe('toJedi (router)', () => {
     expect(result.success).toBe(true);
     if (!result.success) return;
 
-    const ts = result.output.interchanges[0].functional_groups[0].transaction_sets[0] as {
-      heading: { beginning_segment_for_shipper_order_B2: Record<string, unknown> };
-    };
-    expect(ts.heading.beginning_segment_for_shipper_order_B2).toBeDefined();
+    const doc = result.output as import('../types/jedi').Jedi204Stedi;
+    expect(doc.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2).toBeDefined();
+    expect(doc.envelope.interchangeHeader.senderId).toBe('SENDER');
+    expect(doc.envelope.groupHeader.applicationSenderCode).toBe('SENDER');
   });
 
   it('should route 211 to toJedi211', () => {

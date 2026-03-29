@@ -81,7 +81,14 @@
       "Bash(timeout 10 tsx scripts/test-updated-main.ts)",
       "Bash(__NEW_LINE_f0a9ea4ae6c3a9d5__ echo:*)",
       "Bash(timeout 10 tsx scripts/verify-consolidation.ts)",
-      "Bash(__NEW_LINE_ad710026f793d739__ echo:*)"
+      "Bash(__NEW_LINE_ad710026f793d739__ echo:*)",
+      "Bash(timeout 15 tsx scripts/test-exp-main.ts)",
+      "Bash(timeout 10 tsx scripts/regen-204-fixture.ts)",
+      "Bash(timeout 15 tsx scripts/test-evolved-exp.ts)",
+      "Bash(timeout 10 tsx scripts/deep-diff.ts)",
+      "Bash(timeout 15 tsx scripts/regen-exp-fixtures.ts)",
+      "Bash(__NEW_LINE_3cfbeaba4cccfc44__ echo:*)",
+      "Bash(python3:*)"
     ]
   },
   "hooks": {

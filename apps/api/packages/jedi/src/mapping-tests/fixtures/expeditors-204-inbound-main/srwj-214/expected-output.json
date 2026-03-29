@@ -1,0 +1,54 @@
+{
+  "senderId": "USOAKIASA-TRANSCON",
+  "receiverId": "SRWJ",
+  "applicationSenderCode": "EXPD",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "204",
+  "transactionSetPurposeCode": "ORIGINAL",
+  "senderContactCode": "",
+  "standardCarrierAlphaCode": "SRWJ",
+  "order": {
+    "secondaryRefNumber": "J19601497",
+    "tertiaryRefNumber": "J19601497",
+    "quaternaryRefNumber": "MSY",
+    "quinaryRefNumber": "KES",
+    "paymentMethod": "PREPAID_BY_SELLER",
+    "pickupOrDelivery": "PICKUP",
+    "equipmentType": "UCU",
+    "endStop": {
+      "specialInstructions": ""
+    },
+    "deadlineDate": "2024-04-26",
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "J19601497"
+    }
+  },
+  "shipperInformation": {
+    "name": "Sure Logix LLC",
+    "addressLine1": "200 Crofton Road",
+    "addressLine2": "Building 7 Suite 375",
+    "city": "Kenner",
+    "state": "LA",
+    "zip": "70062",
+    "country": "US",
+    "contactName": "Ben Suren",
+    "contactPhone": "504-463-0314"
+  },
+  "consigneeInformation": {
+    "name": "Nike FS Gonzales_163",
+    "addressLine1": "2210 Tanger Boulevard",
+    "addressLine2": "225 Suite Tanger Outlets Gonzales",
+    "city": "Gonzales",
+    "state": "LA",
+    "zip": "70737",
+    "country": "US",
+    "contactName": "Head Coach",
+    "contactPhone": "225-644-4265"
+  },
+  "packages": [
+    {
+      "description": "CONSUMER CLOTHING",
+      "quantity": 3
+    }
+  ]
+}

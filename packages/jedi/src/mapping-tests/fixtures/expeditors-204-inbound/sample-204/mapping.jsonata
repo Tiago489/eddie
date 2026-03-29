@@ -1,19 +1,29 @@
 {
-  "referenceNumber": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_04_ShipmentIdentificationNumber,
+  "referenceNumber": $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.shipment_identification_number_04,
   "carrier": {
-    "scac": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_02_StandardCarrierAlphaCode
+    "scac": $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.standard_carrier_alpha_code_02
   },
-  "paymentMethod": interchanges[0].functional_groups[0].transaction_sets[0].heading.beginning_segment_for_shipper_order_B2.B2_06_ShipmentMethodOfPayment,
-  "stops": interchanges[0].functional_groups[0].transaction_sets[0].detail.stop_off_details_loop_S5.{
-    "sequence": stop_off_details_S5.S5_01_StopSequenceNumber,
-    "reasonCode": stop_off_details_S5.S5_02_StopReasonCode,
+  "paymentMethod": $$.transactionSets[0].heading.beginning_segment_for_shipment_information_transaction_B2.shipment_method_of_payment_06,
+  "stops": $$.transactionSets[0].detail.stop_off_details_S5_loop.{
+    "sequence": stop_off_details_S5.stop_sequence_number_01,
+    "reasonCode": stop_off_details_S5.stop_reason_code_02,
     "location": {
-      "name": party_identification_loop_N1[0].name_N1.N1_02_Name,
-      "address": party_identification_loop_N1[0].address_information_N3.N3_01_AddressInformation,
-      "city": party_identification_loop_N1[0].geographic_location_N4.N4_01_CityName,
-      "state": party_identification_loop_N1[0].geographic_location_N4.N4_02_StateOrProvinceCode,
-      "zip": party_identification_loop_N1[0].geographic_location_N4.N4_03_PostalCode
+      "name": name_N1_loop_shipper.name_N1.name_02
+        ? name_N1_loop_shipper.name_N1.name_02
+        : name_N1_loop_consignee.name_N1.name_02,
+      "address": name_N1_loop_shipper.address_information_N3[0].address_information_01
+        ? name_N1_loop_shipper.address_information_N3[0].address_information_01
+        : name_N1_loop_consignee.address_information_N3[0].address_information_01,
+      "city": name_N1_loop_shipper.geographic_location_N4.city_name_01
+        ? name_N1_loop_shipper.geographic_location_N4.city_name_01
+        : name_N1_loop_consignee.geographic_location_N4.city_name_01,
+      "state": name_N1_loop_shipper.geographic_location_N4.state_or_province_code_02
+        ? name_N1_loop_shipper.geographic_location_N4.state_or_province_code_02
+        : name_N1_loop_consignee.geographic_location_N4.state_or_province_code_02,
+      "zip": name_N1_loop_shipper.geographic_location_N4.postal_code_03
+        ? name_N1_loop_shipper.geographic_location_N4.postal_code_03
+        : name_N1_loop_consignee.geographic_location_N4.postal_code_03
     },
-    "date": date_time_reference_G62[0].G62_02_Date
+    "date": date_time_G62[0].date_02
   }
 }

@@ -46,6 +46,22 @@ const TABLES: LookupTableSet = {
     { Key: 'PDDT', Value: 'PICKUP' },
     { Key: 'NSR', Value: 'DELIVERY' },
   ],
+  DELIVERY_PICKUP: [
+    { Key: 'CL', Value: 'DELIVERY' },
+    { Key: 'CU', Value: 'PICKUP' },
+    { Key: 'RT', Value: 'PICKUP' },
+    { Key: 'LD', Value: 'DELIVERY' },
+    { Key: 'UL', Value: 'PICKUP' },
+  ],
+  SHIPMENT_STATUS_CODES: [
+    { Key: 'IN_TRANSIT', Value: 'X6' },
+    { Key: 'PICKED_UP', Value: 'AF' },
+    { Key: 'DELIVERED', Value: 'D1' },
+    { Key: 'OUT_FOR_DELIVERY', Value: 'OA' },
+    { Key: 'APPOINTMENT_SCHEDULED', Value: 'AA' },
+    { Key: 'APPOINTMENT_MISSED', Value: 'AM' },
+  ],
+  CONTACT_CODES: [],
 };
 
 export function getDefaultTables(): LookupTableSet {

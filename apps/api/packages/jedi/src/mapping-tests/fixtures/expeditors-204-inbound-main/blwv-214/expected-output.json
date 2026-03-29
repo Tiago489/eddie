@@ -1,0 +1,52 @@
+{
+  "senderId": "EXPD-NB",
+  "receiverId": "BLWV",
+  "applicationSenderCode": "EXPD",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "204",
+  "transactionSetPurposeCode": "ORIGINAL",
+  "senderContactCode": "",
+  "standardCarrierAlphaCode": "BLWV",
+  "order": {
+    "secondaryRefNumber": "F121298872",
+    "tertiaryRefNumber": "F121298872",
+    "quaternaryRefNumber": "BOS",
+    "quinaryRefNumber": "BOS",
+    "paymentMethod": "PREPAID_BY_SELLER",
+    "pickupOrDelivery": "PICKUP",
+    "equipmentType": "4510",
+    "endStop": {
+      "specialInstructions": ""
+    },
+    "deadlineDate": "2023-12-29",
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "6120056226"
+    }
+  },
+  "shipperInformation": {
+    "name": "Dover Motion",
+    "addressLine1": "159 Swanson Road",
+    "city": "Boxborough",
+    "state": "MA",
+    "zip": "01719",
+    "country": "US",
+    "contactName": "Fran Nutter",
+    "contactPhone": "7742306558"
+  },
+  "consigneeInformation": {
+    "name": "Expeditors Warehouse",
+    "addressLine1": "1 Technology Dr",
+    "city": "Peabody",
+    "state": "MA",
+    "zip": "01960",
+    "country": "US",
+    "contactName": "Vinny Delucia",
+    "contactPhone": "9785310001"
+  },
+  "packages": [
+    {
+      "description": "ROBOTICS PARTS, NOS",
+      "quantity": 0
+    }
+  ]
+}

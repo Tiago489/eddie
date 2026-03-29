@@ -4,6 +4,9 @@ import type {
   JediInterchangeEnvelope,
   JediFunctionalGroup,
   Jedi204,
+  Jedi204Stedi,
+  Stedi204TransactionSet,
+  Stedi204StopOff,
   Jedi214,
   Stedi214TransactionSet,
   Jedi211,
@@ -242,19 +245,213 @@ export function toJedi204(parsed: ParsedEnvelope): MappingResult<JediDocument> {
 }
 
 // ---------------------------------------------------------------------------
+// toStedi204 — Stedi-compatible flat format for 204 Load Tender
+// ---------------------------------------------------------------------------
+
+// Entity code → N1 role name mapping for S5 stops
+const S5_N1_ROLES: Record<string, string> = {
+  PW: 'shipper', SF: 'shipper', SH: 'shipper',
+  DA: 'consignee', CN: 'consignee', ST: 'consignee',
+  CA: 'carrier', BT: 'bill_to',
+};
+
+export function toStedi204(parsed: ParsedEnvelope): MappingResult<JediDocument> {
+  const txSegs = parsed.transactionSegments;
+
+  const b2 = extractSegment(txSegs, 'B2');
+  if (!b2) {
+    return { success: false, error: 'Missing required B2 segment' };
+  }
+
+  const envelopeSegs = parsed.segments.map((s) => ({ id: s[0], elements: s }));
+  const stSeg = extractSegment(envelopeSegs, 'ST');
+  const seSeg = extractSegment(envelopeSegs, 'SE');
+  const isaSeg = parsed.segments.find((s) => s[0] === 'ISA');
+  const gsSeg = parsed.segments.find((s) => s[0] === 'GS');
+
+  const b2a = extractSegment(txSegs, 'B2A');
+
+  // Split heading vs detail at first S5
+  const firstS5Idx = txSegs.findIndex((s) => s.id === 'S5');
+  const headingSegs = firstS5Idx === -1 ? txSegs : txSegs.slice(0, firstS5Idx);
+
+  const headingL11s = extractAllSegments(headingSegs, 'L11');
+  const headingNTEs = extractAllSegments(headingSegs, 'NTE');
+  const headingN7s = extractAllSegments(headingSegs, 'N7');
+
+  const heading: Stedi204TransactionSet['heading'] = {
+    transaction_set_header_ST: {
+      transaction_set_identifier_code_01: parsed.transactionSetId,
+      transaction_set_control_number_02: stSeg?.elements[2] ?? '0001',
+    },
+    beginning_segment_for_shipment_information_transaction_B2: {
+      ...(b2.elements[2] ? { standard_carrier_alpha_code_02: b2.elements[2] } : {}),
+      ...(b2.elements[4] ? { shipment_identification_number_04: b2.elements[4] } : {}),
+      ...(b2.elements[6] ? { shipment_method_of_payment_06: b2.elements[6] } : {}),
+    },
+  };
+
+  if (b2a) {
+    heading.set_purpose_B2A = {
+      transaction_set_purpose_code_01: b2a.elements[1],
+    };
+  }
+
+  if (headingL11s.length > 0) {
+    heading.business_instructions_and_reference_number_L11 = headingL11s.map((s) => ({
+      reference_identification_01: s.elements[1],
+      reference_identification_qualifier_02: s.elements[2],
+    }));
+    // Also create keyed L11 entries: heading["L11 - IT"], heading["L11 - KU"], etc.
+    for (const s of headingL11s) {
+      const qualifier = s.elements[2];
+      if (qualifier) {
+        (heading as Record<string, unknown>)[`L11 - ${qualifier}`] = {
+          reference_identification_01: s.elements[1],
+        };
+      }
+    }
+  }
+
+  if (headingN7s.length > 0) {
+    heading.equipment_details_N7_loop = headingN7s.map((s) => ({
+      equipment_details_N7: {
+        ...(s.elements[22] ? { equipment_type_22: s.elements[22] } : {}),
+        ...(s.elements[3] ? { weight_03: Number(s.elements[3]) || undefined } : {}),
+      },
+    }));
+  }
+
+  // Heading N1 loops keyed by role
+  const headingN1Segs = headingSegs.filter(
+    (s) => s.id === 'N1' || s.id === 'N3' || s.id === 'N4' || s.id === 'G61',
+  );
+  const headingN1Map = buildStediN1Loops(headingN1Segs);
+  for (const [key, loop] of Object.entries(headingN1Map)) {
+    (heading as Record<string, unknown>)[key] = loop;
+  }
+
+  // Build S5 stop-off detail loops
+  const s5Groups = groupLoops(txSegs, ['S5']);
+  const stopOffs: Stedi204StopOff[] = s5Groups.map((group) => {
+    const s5Seg = group.segments[0];
+    const groupSegs = group.segments.slice(1);
+
+    const units = s5Seg.elements[5] ? Number(s5Seg.elements[5]) : undefined;
+    const stopOff: Stedi204StopOff = {
+      stop_off_details_S5: {
+        stop_sequence_number_01: s5Seg.elements[1],
+        stop_reason_code_02: s5Seg.elements[2],
+        ...(units !== undefined && !isNaN(units) ? { number_of_units_shipped_05: units } : {}),
+      },
+    };
+
+    const stopL11s = extractAllSegments(groupSegs, 'L11');
+    if (stopL11s.length > 0) {
+      stopOff.business_instructions_and_reference_number_L11 = stopL11s.map((s) => ({
+        reference_identification_01: s.elements[1],
+        reference_identification_qualifier_02: s.elements[2],
+      }));
+    }
+
+    const stopG62s = extractAllSegments(groupSegs, 'G62');
+    if (stopG62s.length > 0) {
+      stopOff.date_time_G62 = stopG62s.map((s) => ({
+        ...(s.elements[1] ? { date_qualifier_01: s.elements[1] } : {}),
+        ...(s.elements[2] ? { date_02: formatDate(s.elements[2]) } : {}),
+        ...(s.elements[3] ? { time_qualifier_03: s.elements[3] } : {}),
+        ...(s.elements[4] ? { time_04: s.elements[4] } : {}),
+      }));
+    }
+
+    // NTE segments
+    const stopNTEs = extractAllSegments(groupSegs, 'NTE');
+    if (stopNTEs.length > 0) {
+      stopOff.note_special_instruction_NTE = {
+        description_02: stopNTEs.map((s) => s.elements[2] ?? '').join(' '),
+      };
+    }
+
+    // L5 description loops
+    const stopL5s = extractAllSegments(groupSegs, 'L5');
+    if (stopL5s.length > 0) {
+      stopOff.description_marks_and_numbers_L5_loop = stopL5s.map((s) => ({
+        description_marks_and_numbers_L5: {
+          ...(s.elements[1] ? { lading_line_item_number_01: s.elements[1] } : {}),
+          ...(s.elements[2] ? { lading_description_02: s.elements[2] } : {}),
+        },
+      }));
+    }
+
+    // N1 loops keyed by role (shipper/consignee within each stop)
+    const stopN1Segs = groupSegs.filter(
+      (s) => s.id === 'N1' || s.id === 'N3' || s.id === 'N4' || s.id === 'G61',
+    );
+    const stopN1Map = buildStediN1Loops(stopN1Segs);
+    for (const [key, loop] of Object.entries(stopN1Map)) {
+      (stopOff as Record<string, unknown>)[key] = loop;
+    }
+
+    return stopOff;
+  });
+
+  const ts204: Stedi204TransactionSet = {
+    heading,
+    detail: { stop_off_details_S5_loop: stopOffs },
+  };
+
+  if (seSeg) {
+    ts204.summary = {
+      transaction_set_trailer_SE: {
+        number_of_included_segments_01: seSeg.elements[1],
+        transaction_set_control_number_02: seSeg.elements[2],
+      },
+    };
+  }
+
+  const doc: Jedi204Stedi = {
+    envelope: {
+      interchangeHeader: {
+        senderId: isaSeg ? isaSeg[6].trim() : '',
+        receiverId: isaSeg ? isaSeg[8].trim() : '',
+        controlNumber: parsed.isaControlNumber,
+        ...(isaSeg?.[1] ? { authorizationInformationQualifier: isaSeg[1] } : {}),
+        ...(isaSeg?.[2] ? { authorizationInformation: isaSeg[2] } : {}),
+        ...(isaSeg?.[14] ? { acknowledgmentRequestedCode: isaSeg[14] } : {}),
+        ...(isaSeg?.[15] ? { usageIndicatorCode: isaSeg[15] } : {}),
+      },
+      groupHeader: {
+        applicationSenderCode: gsSeg ? gsSeg[2] : '',
+        applicationReceiverCode: gsSeg ? gsSeg[3] : '',
+        ...(gsSeg?.[4] ? { date: gsSeg[4] } : {}),
+        ...(gsSeg?.[5] ? { time: gsSeg[5] } : {}),
+        groupControlNumber: gsSeg ? gsSeg[6] : parsed.gsControlNumber ?? '',
+      },
+    },
+    transactionSets: [ts204],
+  };
+
+  return { success: true, output: doc };
+}
+
+// ---------------------------------------------------------------------------
 // Stedi-compatible N1 loop builder for 211
 // ---------------------------------------------------------------------------
 
 const N1_ENTITY_TO_ROLE: Record<string, string> = {
   SH: 'shipper',
   SF: 'shipper',
+  PW: 'shipper',
   CN: 'consignee',
   ST: 'consignee',
+  DA: 'consignee',
   BT: 'bill_to',
   BY: 'buying_party',
   SE: 'selling_party',
   CA: 'carrier',
   PF: 'party_to_receive_freight_bill',
+  D8: 'contact',
+  N5: 'pod',
 };
 
 function buildStediN1Loops(segments: Segment[]): Record<string, StediN1Loop> {
@@ -589,11 +786,11 @@ export function toJedi214(parsed: ParsedEnvelope): MappingResult<JediDocument> {
 
 export function toJedi(parsed: ParsedEnvelope): MappingResult<JediDocument> {
   switch (parsed.transactionSetId) {
-    case '204': return toJedi204(parsed);
-    case '210': return toJedi214(parsed); // 210 uses same B10 structure
+    case '204': return toStedi204(parsed);
+    case '210': return toJedi214(parsed);
     case '211': return toJedi211(parsed);
     case '214': return toJedi214(parsed);
-    case '990': return toJedi204(parsed); // 990 response references 204 structure
+    case '990': return toStedi204(parsed);
     case '997': return toJedi997(parsed);
     default: return { success: false, error: `Unsupported transaction set: ${parsed.transactionSetId}` };
   }

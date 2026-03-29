@@ -70,6 +70,87 @@ export interface Jedi204 {
   };
 }
 
+// Stedi204 — Motor Carrier Load Tender (Stedi-compatible flat format)
+
+export interface Stedi204StopOff {
+  stop_off_details_S5: {
+    stop_sequence_number_01: string;
+    stop_reason_code_02: string;
+    number_of_units_shipped_05?: number;
+  };
+  business_instructions_and_reference_number_L11?: Array<{
+    reference_identification_01: string;
+    reference_identification_qualifier_02: string;
+  }>;
+  date_time_G62?: Array<{
+    date_qualifier_01?: string;
+    date_02?: string;
+    time_qualifier_03?: string;
+    time_04?: string;
+  }>;
+  note_special_instruction_NTE?: {
+    description_02?: string;
+  };
+  description_marks_and_numbers_L5_loop?: Array<{
+    description_marks_and_numbers_L5: {
+      lading_line_item_number_01?: string;
+      lading_description_02?: string;
+    };
+  }>;
+  [key: `name_N1_loop_${string}`]: StediN1Loop | undefined;
+}
+
+export interface Stedi204TransactionSet {
+  heading: {
+    transaction_set_header_ST: {
+      transaction_set_identifier_code_01: string;
+      transaction_set_control_number_02: string;
+    };
+    beginning_segment_for_shipment_information_transaction_B2: {
+      standard_carrier_alpha_code_02?: string;
+      shipment_identification_number_04?: string;
+      shipment_method_of_payment_06?: string;
+    };
+    set_purpose_B2A?: {
+      transaction_set_purpose_code_01: string;
+    };
+    business_instructions_and_reference_number_L11?: Array<{
+      reference_identification_01: string;
+      reference_identification_qualifier_02: string;
+    }>;
+    equipment_details_N7_loop?: Array<{
+      equipment_details_N7: {
+        equipment_type_22?: string;
+        weight_03?: number;
+      };
+    }>;
+    [key: `L11 - ${string}`]: { reference_identification_01: string } | undefined;
+    [key: `name_N1_loop_${string}`]: StediN1Loop | undefined;
+  };
+  detail: {
+    stop_off_details_S5_loop: Stedi204StopOff[];
+  };
+  summary?: {
+    transaction_set_trailer_SE: {
+      number_of_included_segments_01: string;
+      transaction_set_control_number_02: string;
+    };
+  };
+}
+
+export interface StediGroupHeader {
+  applicationSenderCode: string;
+  applicationReceiverCode: string;
+  date?: string;
+  time?: string;
+  groupControlNumber: string;
+}
+
+export interface Jedi204Stedi {
+  envelope: StediEnvelope & { groupHeader: StediGroupHeader };
+  transactionSets: Stedi204TransactionSet[];
+}
+
 // Jedi214 — Transportation Carrier Shipment Status Message (Stedi-compatible flat format)
 
 export interface Stedi214TransactionSet {
@@ -283,5 +364,6 @@ export interface JediInterchangeEnvelope {
 
 export type JediDocument =
   | { interchanges: JediInterchangeEnvelope[] }
+  | Jedi204Stedi
   | Jedi214
   | Jedi211;
