@@ -10,7 +10,7 @@
     "secondaryRefNumber": "IAH-472-89778277-00",
     "deadlineDate": "2024-08-01",
     "paymentMethod": "COLLECT",
-    "pickupOrDelivery": "DELIVERY",
+    "pickupOrDelivery": "PICKUP_AND_DELIVERY",
     "endStop": {
       "specialInstructions": "SCAN GL MUST BE ADVISED OF ANY DAMAGES OF THE BELOW NUMBER"
     },

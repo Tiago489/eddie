@@ -3,7 +3,7 @@ import { X12Parser } from '@edi-platform/edi-core';
 import {
   toJedi, JsonataEvaluator, validateTmsOutput, defaultTmsSchema,
   runMappingTest, type MappingFixture,
-  learnFromFixture, addEntries,
+  learnFromFixture, addEntries, refreshTmsSchema,
 } from '@edi-platform/jedi';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -176,7 +176,11 @@ export async function fixturesRoutes(app: FastifyInstance) {
       fs.writeFile(path.join(fixtureDir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n'),
     ]);
 
-    // Learn new lookup values from Stedi ground truth
+    // Refresh TMS schema from all fixtures so new ground truth is incorporated
+    if (source === 'stedi' && testPass) {
+      refreshTmsSchema();
+    }
+
     let learnedCount = 0;
     if (source === 'stedi' && typeof mapResult.output === 'object' && mapResult.output !== null) {
       const learned = learnFromFixture(

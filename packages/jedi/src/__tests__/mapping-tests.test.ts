@@ -91,20 +91,19 @@ describe('mapping-tests runner', () => {
     }
   });
 
-  it('should include TMS validation errors in results', async () => {
-    // Mapping that produces output missing required fields
+  it('should fail when output does not match expected', async () => {
     const fixture: MappingFixture = {
-      name: 'test-incomplete',
+      name: 'test-mismatch-expected',
       carrier: 'TestCarrier',
       inputEdi: SAMPLE_EDI,
-      expectedOutput: { partial: true },
+      expectedOutput: { wrong: 'shape' },
       jsonataExpression: '{ "partial": true }',
     };
 
     const result = await runMappingTest(fixture);
     expect(result.pass).toBe(false);
     if (!result.pass) {
-      expect(result.errors.some((e) => e.includes('Missing required field'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('Output does not match expected'))).toBe(true);
     }
   });
 

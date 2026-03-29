@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { validateTmsOutput, type TmsOutputSchema } from '../output-validator';
-import { defaultTmsSchema } from '../tms-schema';
+
+// Explicit test schema — tests should not depend on derived/dynamic defaultTmsSchema
+const TEST_SCHEMA: TmsOutputSchema = {
+  required: ['referenceNumber', 'carrier.scac', 'stops'],
+  optional: ['carrier.name', 'notes'],
+  noExtraFields: false,
+};
 
 const VALID_OUTPUT = {
   referenceNumber: 'SH12345',
@@ -13,13 +19,13 @@ const VALID_OUTPUT = {
 
 describe('validateTmsOutput', () => {
   it('should return valid for a correct output', () => {
-    const result = validateTmsOutput(VALID_OUTPUT, defaultTmsSchema);
+    const result = validateTmsOutput(VALID_OUTPUT, TEST_SCHEMA);
     expect(result).toEqual({ valid: true });
   });
 
   it('should report missing required top-level field', () => {
     const { referenceNumber: _, ...missing } = VALID_OUTPUT;
-    const result = validateTmsOutput(missing, defaultTmsSchema);
+    const result = validateTmsOutput(missing, TEST_SCHEMA);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors).toContain('Missing required field: referenceNumber');
@@ -28,7 +34,7 @@ describe('validateTmsOutput', () => {
 
   it('should report missing required nested field', () => {
     const output = { ...VALID_OUTPUT, carrier: { name: 'Acme' } };
-    const result = validateTmsOutput(output, defaultTmsSchema);
+    const result = validateTmsOutput(output, TEST_SCHEMA);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors).toContain('Missing required field: carrier.scac');
@@ -36,7 +42,7 @@ describe('validateTmsOutput', () => {
   });
 
   it('should report multiple missing required fields', () => {
-    const result = validateTmsOutput({}, defaultTmsSchema);
+    const result = validateTmsOutput({}, TEST_SCHEMA);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors.length).toBe(3);
@@ -72,7 +78,7 @@ describe('validateTmsOutput', () => {
   });
 
   it('should return error for null output', () => {
-    const result = validateTmsOutput(null, defaultTmsSchema);
+    const result = validateTmsOutput(null, TEST_SCHEMA);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors).toContain('Output is null or undefined');
@@ -80,7 +86,7 @@ describe('validateTmsOutput', () => {
   });
 
   it('should return error for undefined output', () => {
-    const result = validateTmsOutput(undefined, defaultTmsSchema);
+    const result = validateTmsOutput(undefined, TEST_SCHEMA);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors).toContain('Output is null or undefined');
@@ -88,7 +94,7 @@ describe('validateTmsOutput', () => {
   });
 
   it('should return error for non-object output', () => {
-    const result = validateTmsOutput('not an object', defaultTmsSchema);
+    const result = validateTmsOutput('not an object', TEST_SCHEMA);
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.errors).toContain('Output must be a non-null object');

@@ -10,7 +10,7 @@
     "secondaryRefNumber": "CMH-472-86713017-00",
     "deadlineDate": "2023-10-23",
     "paymentMethod": "COLLECT",
-    "pickupOrDelivery": "DELIVERY",
+    "pickupOrDelivery": "PICKUP_AND_DELIVERY",
     "endStop": {
       "specialInstructions": "065-Class 65LHS-Station Surcharge"
     },

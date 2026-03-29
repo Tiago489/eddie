@@ -10,7 +10,7 @@
     "secondaryRefNumber": "SBN-472-95945408-00",
     "deadlineDate": "2026-03-31",
     "paymentMethod": "COLLECT",
-    "pickupOrDelivery": "DELIVERY",
+    "pickupOrDelivery": "PICKUP_AND_DELIVERY",
     "endStop": {
       "specialInstructions": "250-Class 250LGD-Liftgate DeliveryLHS-Station SurchargeWCI-Weight Class Inspection Fee"
     },

@@ -14,6 +14,29 @@ function lookupTable(
 const OMIT_FIELD = Symbol.for('stedi_omit_field');
 const OMIT_ARRAY_ITEM = Symbol.for('stedi_omit_array_item');
 
+// Reusable: maps AT5 handling code to service type.
+// Any mapping can call $serviceType(AT5[0].special_handling_code_01)
+function serviceType(code: unknown): string {
+  if (typeof code !== 'string') return 'PICKUP_AND_DELIVERY';
+  switch (code) {
+    case 'PUC': return 'PICKUP';
+    case 'DEL': case 'LCL': return 'DELIVERY';
+    default: return 'PICKUP_AND_DELIVERY';
+  }
+}
+
+// Reusable: returns true if the service type includes a delivery leg
+function hasDelivery(code: unknown): boolean {
+  const st = serviceType(code);
+  return st === 'DELIVERY' || st === 'PICKUP_AND_DELIVERY';
+}
+
+// Reusable: returns true if the service type includes a pickup leg
+function hasPickup(code: unknown): boolean {
+  const st = serviceType(code);
+  return st === 'PICKUP' || st === 'PICKUP_AND_DELIVERY';
+}
+
 export class JsonataEvaluator {
   private customFunctions: Array<{
     name: string;
@@ -43,6 +66,9 @@ export class JsonataEvaluator {
       expr.registerFunction('lookupTable', lookupTable);
       expr.registerFunction('trim', (s: unknown) => typeof s === 'string' ? s.trim() : s);
       expr.registerFunction('omitField', () => OMIT_FIELD);
+      expr.registerFunction('serviceType', serviceType);
+      expr.registerFunction('hasDelivery', hasDelivery);
+      expr.registerFunction('hasPickup', hasPickup);
 
       for (const { name, fn, signature } of this.customFunctions) {
         expr.registerFunction(name, fn, signature);

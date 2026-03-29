@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { X12Parser } from '@edi-platform/edi-core';
 import type { Segment, ParsedEnvelope } from '@edi-platform/edi-core';
 import type { MappingResult } from '@edi-platform/types';
-import { toJedi204, toJedi211, toJedi997, toJedi } from '../transforms/to-jedi';
+import { toJedi204, toJedi211, toJedi214, toJedi997, toJedi } from '../transforms/to-jedi';
 import type { JediDocument } from '../types/jedi';
 
 const fixturesDir = resolve(__dirname, '../../../../tests/fixtures');
@@ -535,6 +535,83 @@ describe('toJedi211', () => {
   });
 });
 
+describe('toJedi214', () => {
+  const parser = new X12Parser();
+
+  it('should parse a 214 EDI file with B10 header into Stedi-compatible format', () => {
+    const rawEdi = readFileSync(resolve(fixturesDir, 'edi/sample_214.edi'), 'utf-8');
+    const parseResult = parser.parse(rawEdi);
+    expect(parseResult.success).toBe(true);
+    if (!parseResult.success) return;
+
+    const result = toJedi214(parseResult.data);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const doc = result.output as import('../types/jedi').Jedi214;
+    expect(doc.envelope.interchangeHeader.senderId).toBe('CARRIER');
+    expect(doc.envelope.interchangeHeader.receiverId).toBe('RECEIVER');
+
+    const ts = doc.transactionSets[0];
+    expect(ts.heading.transaction_set_header_ST.transaction_set_identifier_code_01).toBe('214');
+    expect(ts.heading.beginning_segment_B10.reference_identification_01).toBe('SH12345');
+    expect(ts.heading.beginning_segment_B10.standard_carrier_alpha_code_03).toBe('SCAC');
+
+    expect(ts.heading.reference_identification_L11).toHaveLength(2);
+    expect(ts.heading.reference_identification_L11![0].reference_identification_qualifier_02).toBe('BM');
+
+    expect(ts.heading.shipment_status_details_AT7).toHaveLength(1);
+    expect(ts.heading.shipment_status_details_AT7![0].shipment_status_code_01).toBe('X1');
+
+    expect(ts.heading.equipment_location_MS1?.city_name_01).toBe('CHICAGO');
+    expect(ts.heading.equipment_location_MS1?.state_or_province_code_02).toBe('IL');
+
+    expect(ts.heading.shipment_weight_AT8?.weight_03).toBe(5000);
+    expect(ts.heading.shipment_weight_AT8?.lading_quantity_04).toBe(200);
+
+    expect(ts.summary?.transaction_set_trailer_SE.number_of_included_segments_01).toBe('8');
+  });
+
+  it('should fail when B10 segment is missing', () => {
+    const parsed: ParsedEnvelope = {
+      isaControlNumber: '000000001',
+      gsControlNumber: '1',
+      transactionSetId: '214',
+      segments: [],
+      transactionSegments: [
+        { id: 'L11', elements: ['L11', 'REF001', 'BM'] },
+      ],
+    };
+
+    const result = toJedi214(parsed);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('B10');
+    }
+  });
+
+  it('should handle minimal 214 with only B10 segment', () => {
+    const parsed: ParsedEnvelope = {
+      isaControlNumber: '000000001',
+      gsControlNumber: '1',
+      transactionSetId: '214',
+      segments: [],
+      transactionSegments: [
+        { id: 'B10', elements: ['B10', 'REF123', 'SHIP456', 'ABCD'] },
+      ],
+    };
+
+    const result = toJedi214(parsed);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const doc = result.output as import('../types/jedi').Jedi214;
+    const ts = doc.transactionSets[0];
+    expect(ts.heading.beginning_segment_B10.reference_identification_01).toBe('REF123');
+    expect(ts.heading.beginning_segment_B10.standard_carrier_alpha_code_03).toBe('ABCD');
+  });
+});
+
 describe('toJedi (router)', () => {
   const parser = new X12Parser();
 
@@ -567,6 +644,19 @@ describe('toJedi (router)', () => {
     expect(doc.envelope.interchangeHeader.senderId).toBe('FWDA');
   });
 
+  it('should route 214 to toJedi214', () => {
+    const edi = readFileSync(resolve(fixturesDir, 'edi/sample_214.edi'), 'utf-8');
+    const parsed = parser.parse(edi);
+    if (!parsed.success) throw new Error('Parse failed');
+
+    const result = toJedi(parsed.data);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const doc = result.output as import('../types/jedi').Jedi214;
+    expect(doc.transactionSets[0].heading.beginning_segment_B10).toBeDefined();
+  });
+
   it('should route 997 to toJedi997', () => {
     const edi = readFileSync(resolve(fixturesDir, 'edi/sample_997.edi'), 'utf-8');
     const parsed = parser.parse(edi);
@@ -574,6 +664,22 @@ describe('toJedi (router)', () => {
 
     const result = toJedi(parsed.data);
     expect(result.success).toBe(true);
+  });
+
+  it('should return error for unsupported transaction set', () => {
+    const parsed: ParsedEnvelope = {
+      isaControlNumber: '000000001',
+      gsControlNumber: '1',
+      transactionSetId: '999',
+      segments: [],
+      transactionSegments: [],
+    };
+
+    const result = toJedi(parsed);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('Unsupported transaction set: 999');
+    }
   });
 });
 

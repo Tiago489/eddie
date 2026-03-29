@@ -4,6 +4,8 @@ import type {
   JediInterchangeEnvelope,
   JediFunctionalGroup,
   Jedi204,
+  Jedi214,
+  Stedi214TransactionSet,
   Jedi211,
   Stedi211TransactionSet,
   StediN1Loop,
@@ -492,12 +494,108 @@ export function toJedi211(parsed: ParsedEnvelope): MappingResult<JediDocument> {
   return { success: true, output: doc };
 }
 
+export function toJedi214(parsed: ParsedEnvelope): MappingResult<JediDocument> {
+  const txSegs = parsed.transactionSegments;
+
+  const b10 = extractSegment(txSegs, 'B10');
+  if (!b10) {
+    return { success: false, error: 'Missing required B10 segment' };
+  }
+
+  const envelopeSegs = parsed.segments.map((s) => ({ id: s[0], elements: s }));
+  const stSeg = extractSegment(envelopeSegs, 'ST');
+  const seSeg = extractSegment(envelopeSegs, 'SE');
+  const isaSeg = parsed.segments.find((s) => s[0] === 'ISA');
+
+  const l11s = extractAllSegments(txSegs, 'L11');
+  const at7s = extractAllSegments(txSegs, 'AT7');
+  const ms1 = extractSegment(txSegs, 'MS1');
+  const at8 = extractSegment(txSegs, 'AT8');
+
+  const heading: Stedi214TransactionSet['heading'] = {
+    transaction_set_header_ST: {
+      transaction_set_identifier_code_01: parsed.transactionSetId,
+      transaction_set_control_number_02: stSeg?.elements[2] ?? '0001',
+    },
+    beginning_segment_B10: {
+      reference_identification_01: b10.elements[1],
+      ...(b10.elements[2] ? { shipment_identification_number_02: b10.elements[2] } : {}),
+      standard_carrier_alpha_code_03: b10.elements[3],
+    },
+  };
+
+  if (l11s.length > 0) {
+    heading.reference_identification_L11 = l11s.map((s) => ({
+      reference_identification_01: s.elements[1],
+      reference_identification_qualifier_02: s.elements[2],
+    }));
+  }
+
+  if (at7s.length > 0) {
+    heading.shipment_status_details_AT7 = at7s.map((s) => ({
+      ...(s.elements[1] ? { shipment_status_code_01: s.elements[1] } : {}),
+      ...(s.elements[2] ? { shipment_status_reason_code_02: s.elements[2] } : {}),
+      ...(s.elements[5] ? { date_03: formatDate(s.elements[5]) } : {}),
+      ...(s.elements[6] ? { time_04: s.elements[6] } : {}),
+    }));
+  }
+
+  if (ms1) {
+    heading.equipment_location_MS1 = {
+      ...(ms1.elements[1] ? { city_name_01: ms1.elements[1] } : {}),
+      ...(ms1.elements[2] ? { state_or_province_code_02: ms1.elements[2] } : {}),
+    };
+  }
+
+  if (at8) {
+    const wt = at8.elements[3] ? Number(at8.elements[3]) : undefined;
+    const qty = at8.elements[4] ? Number(at8.elements[4]) : undefined;
+    heading.shipment_weight_AT8 = {
+      ...(at8.elements[1] ? { weight_qualifier_01: at8.elements[1] } : {}),
+      ...(at8.elements[2] ? { weight_unit_code_02: at8.elements[2] } : {}),
+      ...(wt !== undefined && !isNaN(wt) ? { weight_03: wt } : {}),
+      ...(qty !== undefined && !isNaN(qty) ? { lading_quantity_04: qty } : {}),
+    };
+  }
+
+  const ts214: Stedi214TransactionSet = { heading };
+
+  if (seSeg) {
+    ts214.summary = {
+      transaction_set_trailer_SE: {
+        number_of_included_segments_01: seSeg.elements[1],
+        transaction_set_control_number_02: seSeg.elements[2],
+      },
+    };
+  }
+
+  const doc: Jedi214 = {
+    envelope: {
+      interchangeHeader: {
+        senderId: isaSeg ? isaSeg[6].trim() : '',
+        receiverId: isaSeg ? isaSeg[8].trim() : '',
+        controlNumber: parsed.isaControlNumber,
+        ...(isaSeg?.[1] ? { authorizationInformationQualifier: isaSeg[1] } : {}),
+        ...(isaSeg?.[2] ? { authorizationInformation: isaSeg[2] } : {}),
+        ...(isaSeg?.[14] ? { acknowledgmentRequestedCode: isaSeg[14] } : {}),
+        ...(isaSeg?.[15] ? { usageIndicatorCode: isaSeg[15] } : {}),
+      },
+    },
+    transactionSets: [ts214],
+  };
+
+  return { success: true, output: doc };
+}
+
 export function toJedi(parsed: ParsedEnvelope): MappingResult<JediDocument> {
   switch (parsed.transactionSetId) {
     case '204': return toJedi204(parsed);
+    case '210': return toJedi214(parsed); // 210 uses same B10 structure
     case '211': return toJedi211(parsed);
+    case '214': return toJedi214(parsed);
+    case '990': return toJedi204(parsed); // 990 response references 204 structure
     case '997': return toJedi997(parsed);
-    default: return toJedi204(parsed); // fallback for unknown sets
+    default: return { success: false, error: `Unsupported transaction set: ${parsed.transactionSetId}` };
   }
 }
 

@@ -24,12 +24,9 @@
       $$.transactionSets[0].heading.beginning_segment_for_the_motor_carrier_bill_of_lading_BOL.shipment_method_of_payment_02
     )
       .Value,
-    "pickupOrDelivery": $lookupTable(
-      $tables.PICKUP_OR_DELIVERY,
-      "Key",
+    "pickupOrDelivery": $serviceType(
       $$.transactionSets[0].heading.bill_of_lading_handling_requirements_AT5[0].special_handling_code_01
-    )
-      .Value,
+    ),
     "endStop": {
       "specialInstructions": $reduce(
         $$.transactionSets[0].heading.business_instructions_and_reference_number_L11,
@@ -52,7 +49,11 @@
   },
   "consigneeInformation": (
     $__TYPE__ := "OBJECT_UNARY_CONTEXT_BLOCK";
-    $__CONTEXT__ := $$.transactionSets[0].heading.name_N1_loop_consignee;
+    $__CONTEXT__ := $hasDelivery(
+      $$.transactionSets[0].heading.bill_of_lading_handling_requirements_AT5[0].special_handling_code_01
+    )
+      ? $$.transactionSets[0].heading.name_N1_loop_consignee
+      : $omitField;
     $__CONTEXT__ = $omitField
       ? $omitField
       : $__CONTEXT__

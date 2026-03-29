@@ -75,7 +75,12 @@
       "Bash(pnpm vitest:*)",
       "Bash(timeout 10 tsx scripts/test-mappings.ts)",
       "Bash(find packages/jedi/src/mapping-tests/fixtures -type d -name *srwj* -o -type d -name *211*)",
-      "Bash(find . -name *srwj* -o -name *SRWJ*)"
+      "Bash(find . -name *srwj* -o -name *SRWJ*)",
+      "Bash(psql \"$DATABASE_URL\" -t -A -c \":*)",
+      "Bash(psql \"$DATABASE_URL\" -c \":*)",
+      "Bash(timeout 10 tsx scripts/test-updated-main.ts)",
+      "Bash(__NEW_LINE_f0a9ea4ae6c3a9d5__ echo:*)",
+      "Bash(timeout 10 tsx scripts/verify-consolidation.ts)"
     ]
   },
   "hooks": {

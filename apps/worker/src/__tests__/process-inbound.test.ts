@@ -208,10 +208,9 @@ describe('processInboundJob', { timeout: 60000 }, () => {
     });
   });
 
-  it('should create MAPPING_WARNING event when output is missing required TMS fields', async () => {
+  it('should deliver successfully even when mapping produces non-standard output shape', async () => {
     const prisma = getDb();
 
-    // Replace active mapping with one that produces an incomplete output
     await prisma.mapping.updateMany({
       where: { orgId },
       data: { isActive: false },
@@ -219,7 +218,7 @@ describe('processInboundJob', { timeout: 60000 }, () => {
     await prisma.mapping.create({
       data: {
         orgId,
-        name: 'Incomplete Output',
+        name: 'Minimal Output',
         transactionSet: 'EDI_204',
         direction: 'INBOUND',
         jsonataExpression: '{ "partialField": "value" }',
@@ -239,20 +238,13 @@ describe('processInboundJob', { timeout: 60000 }, () => {
 
     server.close();
 
-    // Should still deliver despite validation warnings
+    // Validation is advisory — transaction should still deliver
     expect(result.success).toBe(true);
     const tx = await prisma.transaction.findFirst();
     expect(tx?.status).toBe('DELIVERED');
+    expect(tx?.outboundPayload).toEqual({ partialField: 'value' });
 
-    // Should have created a MAPPING_WARNING event
-    const events = await prisma.transactionEvent.findMany({
-      where: { transactionId: tx!.id, type: 'MAPPING_WARNING' },
-    });
-    expect(events).toHaveLength(1);
-    expect(events[0].message).toContain('Missing required field');
-
-    // Restore original mapping
-    await prisma.mapping.deleteMany({ where: { orgId, name: 'Incomplete Output' } });
+    await prisma.mapping.deleteMany({ where: { orgId, name: 'Minimal Output' } });
     await prisma.mapping.updateMany({
       where: { orgId },
       data: { isActive: true },

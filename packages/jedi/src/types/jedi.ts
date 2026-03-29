@@ -70,6 +70,53 @@ export interface Jedi204 {
   };
 }
 
+// Jedi214 — Transportation Carrier Shipment Status Message (Stedi-compatible flat format)
+
+export interface Stedi214TransactionSet {
+  heading: {
+    transaction_set_header_ST: {
+      transaction_set_identifier_code_01: string;
+      transaction_set_control_number_02: string;
+    };
+    beginning_segment_B10: {
+      reference_identification_01: string;
+      shipment_identification_number_02?: string;
+      standard_carrier_alpha_code_03: string;
+    };
+    reference_identification_L11?: Array<{
+      reference_identification_01: string;
+      reference_identification_qualifier_02: string;
+    }>;
+    shipment_status_details_AT7?: Array<{
+      shipment_status_code_01?: string;
+      shipment_status_reason_code_02?: string;
+      date_03?: string;
+      time_04?: string;
+    }>;
+    equipment_location_MS1?: {
+      city_name_01?: string;
+      state_or_province_code_02?: string;
+    };
+    shipment_weight_AT8?: {
+      weight_qualifier_01?: string;
+      weight_unit_code_02?: string;
+      weight_03?: number;
+      lading_quantity_04?: number;
+    };
+  };
+  summary?: {
+    transaction_set_trailer_SE: {
+      number_of_included_segments_01: string;
+      transaction_set_control_number_02: string;
+    };
+  };
+}
+
+export interface Jedi214 {
+  envelope: StediEnvelope;
+  transactionSets: Stedi214TransactionSet[];
+}
+
 // Jedi211 — Motor Carrier Bill of Lading (Stedi-compatible flat format)
 // Stedi mappings expect: { envelope, transactionSets[] } at the top level
 // with guide-based field names (e.g. shipment_identification_number_03)
@@ -236,4 +283,5 @@ export interface JediInterchangeEnvelope {
 
 export type JediDocument =
   | { interchanges: JediInterchangeEnvelope[] }
+  | Jedi214
   | Jedi211;

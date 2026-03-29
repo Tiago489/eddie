@@ -32,7 +32,7 @@ const TABLES: LookupTableSet = {
   ],
   PICKUP_OR_DELIVERY: [
     { Key: 'LCL', Value: 'DELIVERY' },
-    { Key: 'PUD', Value: 'DELIVERY' },
+    { Key: 'PUD', Value: 'PICKUP_AND_DELIVERY' },
     { Key: 'PUC', Value: 'PICKUP' },
     { Key: 'DEL', Value: 'DELIVERY' },
   ],
