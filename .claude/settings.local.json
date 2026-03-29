@@ -80,7 +80,8 @@
       "Bash(psql \"$DATABASE_URL\" -c \":*)",
       "Bash(timeout 10 tsx scripts/test-updated-main.ts)",
       "Bash(__NEW_LINE_f0a9ea4ae6c3a9d5__ echo:*)",
-      "Bash(timeout 10 tsx scripts/verify-consolidation.ts)"
+      "Bash(timeout 10 tsx scripts/verify-consolidation.ts)",
+      "Bash(__NEW_LINE_ad710026f793d739__ echo:*)"
     ]
   },
   "hooks": {
