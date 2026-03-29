@@ -1,5 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { JsonataEvaluator } from '@edi-platform/jedi';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { FIXTURES_DIR, slugify } from '../lib/fixtures-path';
 
 const evaluator = new JsonataEvaluator();
 
@@ -61,7 +64,25 @@ export async function mappingsRoutes(app: FastifyInstance) {
     const existing = await app.prisma.mapping.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Not found' });
     const body = request.body as Record<string, unknown>;
-    const record = await app.prisma.mapping.update({ where: { id }, data: body as any });
+
+    const newName = typeof body.name === 'string' ? body.name : null;
+    const nameChanged = newName !== null && newName !== existing.name;
+    const oldSlug = nameChanged ? slugify(existing.name) : null;
+    const newSlug = nameChanged && newName ? slugify(newName) : null;
+
+    const record = await app.prisma.mapping.update({ where: { id }, data: body as Record<string, never> });
+
+    // Move fixture directory if the name (and therefore slug) changed
+    if (oldSlug && newSlug && oldSlug !== newSlug) {
+      const oldDir = path.join(FIXTURES_DIR, oldSlug);
+      const newDir = path.join(FIXTURES_DIR, newSlug);
+      try {
+        await fs.rename(oldDir, newDir);
+      } catch {
+        // Old directory doesn't exist — no fixtures to move
+      }
+    }
+
     return reply.send(record);
   });
 

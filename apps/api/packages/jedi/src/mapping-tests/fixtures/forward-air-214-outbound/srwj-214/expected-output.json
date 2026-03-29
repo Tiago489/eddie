@@ -1,0 +1,61 @@
+{
+  "filename": "SRWJ_214_20260328_114804_071cda20.edi",
+  "partnershipId": "zz-sure-logix_forward-air-complete",
+  "transactionGroups": [
+    {
+      "transactionSettingId": "004010-214",
+      "mappingId": "01HXCHKQFV5NBYACXZ5CK42GHW",
+      "transactions": {
+        "order": {
+          "id": "4727720",
+          "secondaryRefNumber": "MSY-472-95958257-00",
+          "tertiaryRefNumber": "",
+          "quaternaryRefNumber": "",
+          "quinaryRefNumber": "",
+          "SCAC": "SRWJ",
+          "action": "ACCEPTED",
+          "standardOrderFields": {
+            "shipperBillOfLadingNumber": "MSY-472-95958257-00",
+            "masterAirwayBillOfLadingNumber": "95958257"
+          },
+          "equipmentType": "UCU"
+        },
+        "originTerminal": "MSY",
+        "destinationTerminal": "MSY",
+        "shipmentStatusDetails": {
+          "appointmentDate": "",
+          "appointmentTime": "",
+          "appointmentEndTime": "",
+          "status": "PICKUP_DISPATCHED",
+          "sentAtDate": "2026-03-28",
+          "sentAtTime": "06:48",
+          "shipmentCity": "KENNER",
+          "shipmentState": "LA"
+        },
+        "shipperInformation": {
+          "name": "SURE LOGIX",
+          "addressLine1": "200 CROFTON RD.",
+          "addressLine2": "BLDG 7 STE. 375",
+          "city": "KENNER",
+          "state": "LA",
+          "zip": "70062",
+          "country": "US"
+        },
+        "consigneeInformation": {
+          "name": "FORWARD AIR  MSY",
+          "addressLine1": "200 CROFTON RD",
+          "addressLine2": "",
+          "city": "KENNER",
+          "state": "LA",
+          "zip": "70062",
+          "country": "US"
+        },
+        "grossPackageDetails": {
+          "weight": 160.7,
+          "quantity": 1
+        },
+        "podSigneeName": ""
+      }
+    }
+  ]
+}

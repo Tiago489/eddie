@@ -7,22 +7,10 @@ import {
 } from '@edi-platform/jedi';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { FIXTURES_DIR, slugify } from '../lib/fixtures-path';
 
 const parser = new X12Parser();
 const evaluator = new JsonataEvaluator();
-
-const FIXTURES_DIR = path.resolve(
-  process.cwd(),
-  'packages/jedi/src/mapping-tests/fixtures',
-);
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\[([^\]]+)\]/g, '$1')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
 
 function extractCarrier(mappingName: string): string {
   return mappingName.match(/\[([^\]]+)\]/)?.[1] ?? 'Unknown';

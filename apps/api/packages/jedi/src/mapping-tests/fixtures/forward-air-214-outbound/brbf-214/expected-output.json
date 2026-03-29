@@ -1,0 +1,58 @@
+{
+  "filename": "BRBF_214_20260327_232012_f3af50dc.edi",
+  "partnershipId": "baton-rc-zz_forward-air-complete",
+  "transactionGroups": [
+    {
+      "transactionSettingId": "004010-214",
+      "mappingId": "01H30BSR37MXRJ8RFCSAHMXRJ7",
+      "transactions": {
+        "order": {
+          "id": "4637669",
+          "secondaryRefNumber": "MEM-472-95476904-00",
+          "tertiaryRefNumber": "",
+          "quaternaryRefNumber": "",
+          "quinaryRefNumber": "",
+          "SCAC": "BRBF",
+          "action": "ACCEPTED",
+          "standardOrderFields": {
+            "shipperBillOfLadingNumber": "MEM-472-95476904-00",
+            "masterAirwayBillOfLadingNumber": "95476904"
+          },
+          "equipmentType": "UCU"
+        },
+        "destinationTerminal": "TUL",
+        "shipmentStatusDetails": {
+          "appointmentDate": "2026-03-27",
+          "appointmentTime": "16:00",
+          "appointmentEndTime": "16:00",
+          "status": "DELIVERY_COMPLETED",
+          "sentAtDate": "2026-03-27",
+          "sentAtTime": "18:20",
+          "shipmentCity": "GROVEPORT",
+          "shipmentState": "OH"
+        },
+        "shipperInformation": {
+          "name": "FORWARD AIR COMPLETE CONSOLE",
+          "addressLine1": "6800 PORT ROAD",
+          "city": "GROVEPORT",
+          "state": "OH",
+          "zip": "43125",
+          "country": "US"
+        },
+        "consigneeInformation": {
+          "name": "WALMART DC 6094",
+          "addressLine1": "5801 SW REGIONAL AIRPORT BLVD",
+          "city": "BENTONVILLE",
+          "state": "AR",
+          "zip": "72712",
+          "country": "US"
+        },
+        "grossPackageDetails": {
+          "weight": 729,
+          "quantity": 1
+        },
+        "podSigneeName": "Chad Roberts "
+      }
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "filename": "SFGP_214_20260327_212513_5b5d9043.edi",
+  "partnershipId": "sierra-air-freight-zz_forward-air-complete",
+  "transactionGroups": [
+    {
+      "transactionSettingId": "004010-214",
+      "mappingId": "01H30BSR37MXRJ8RFCSAHMXRJ7",
+      "transactions": {
+        "order": {
+          "id": "4710075",
+          "secondaryRefNumber": "RNO-472-95954783-00",
+          "tertiaryRefNumber": "",
+          "quaternaryRefNumber": "",
+          "quinaryRefNumber": "",
+          "SCAC": "SFGP",
+          "action": "ACCEPTED",
+          "standardOrderFields": {
+            "shipperBillOfLadingNumber": "RNO-472-95954783-00",
+            "masterAirwayBillOfLadingNumber": "95954783"
+          },
+          "equipmentType": "UCU"
+        },
+        "originTerminal": "RNO",
+        "shipmentStatusDetails": {
+          "appointmentDate": "",
+          "appointmentTime": "",
+          "appointmentEndTime": "",
+          "status": "PICKUP_COMPLETED",
+          "sentAtDate": "2026-03-27",
+          "sentAtTime": "14:25",
+          "shipmentCity": "RENO",
+          "shipmentState": "NV"
+        },
+        "shipperInformation": {
+          "name": "HUB GROUP",
+          "addressLine1": "10755 LEAR BLVD",
+          "city": "RENO",
+          "state": "NV",
+          "zip": "89506",
+          "country": "US"
+        },
+        "consigneeInformation": {
+          "name": "HUB GROUP",
+          "addressLine1": "10755 LEAR BLVD",
+          "city": "RENO",
+          "state": "NV",
+          "zip": "89506",
+          "country": "US"
+        },
+        "grossPackageDetails": {
+          "weight": 172.8,
+          "quantity": 1
+        },
+        "podSigneeName": "P/u"
+      }
+    }
+  ]
+}

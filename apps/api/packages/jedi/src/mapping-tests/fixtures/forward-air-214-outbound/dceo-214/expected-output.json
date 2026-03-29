@@ -1,0 +1,58 @@
+{
+  "filename": "DCEO_214_20260328_190516_302f573f.edi",
+  "partnershipId": "zz-diamond-cargo_forward-air-complete",
+  "transactionGroups": [
+    {
+      "transactionSettingId": "004010-214",
+      "mappingId": "01J7Y5GTBG4EW5YT6DA7H7PCH2",
+      "transactions": {
+        "order": {
+          "id": "4679239",
+          "secondaryRefNumber": "EWR-472-95939536-00",
+          "tertiaryRefNumber": "",
+          "quaternaryRefNumber": "",
+          "quinaryRefNumber": "",
+          "SCAC": "DCEO",
+          "action": "ACCEPTED",
+          "standardOrderFields": {
+            "shipperBillOfLadingNumber": "EWR-472-95939536-00",
+            "masterAirwayBillOfLadingNumber": "95939536"
+          },
+          "equipmentType": "UCU"
+        },
+        "shipmentStatusDetails": {
+          "appointmentDate": "",
+          "appointmentTime": "",
+          "appointmentEndTime": "",
+          "status": "PICKUP_COMPLETED",
+          "sentAtDate": "2026-03-28",
+          "sentAtTime": "15:05",
+          "shipmentCity": "CORAOPOLIS",
+          "shipmentState": "PA"
+        },
+        "shipperInformation": {
+          "name": "FORWARD AIR INC",
+          "addressLine1": "121 SPRING RUN RD SUITE 310",
+          "addressLine2": "PITTSBURGH AIRPORT IND PARK",
+          "city": "CORAOPOLIS",
+          "state": "PA",
+          "zip": "15108",
+          "country": "US"
+        },
+        "consigneeInformation": {
+          "name": "2199 WALMART",
+          "addressLine1": "50739 VALLEY PLAZA DR",
+          "city": "SAINT CLAIRSVILLE",
+          "state": "OH",
+          "zip": "43950",
+          "country": "US"
+        },
+        "grossPackageDetails": {
+          "weight": 576,
+          "quantity": 1
+        },
+        "podSigneeName": ""
+      }
+    }
+  ]
+}

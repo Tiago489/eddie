@@ -1,0 +1,59 @@
+[
+  {
+    "heading": {
+      "transaction_set_header_ST": { "transaction_set_identifier_code_01": "214", "transaction_set_control_number_02": 1 },
+      "beginning_segment_for_transportation_carrier_shipment_status_message_B10": {
+        "reference_identification_01": $$.order.id,
+        "shipment_identification_number_02": $$.order.standardOrderFields.shipperBillOfLadingNumber,
+        "standard_carrier_alpha_code_03": $substring($$.order.SCAC, 0, 4)
+      },
+      "business_instructions_and_reference_number_L11": [{ "reference_identification_01": "GEG", "reference_identification_qualifier_02": "TR" }],
+      "name_N1_loop_pod": (
+        $__TYPE__ := "OBJECT_UNARY_CONTEXT_BLOCK";
+        $__CONTEXT__ := $boolean($$.podSigneeName) ? $ : $omitField;
+        $__CONTEXT__ = $omitField
+          ? $omitField
+          : $__CONTEXT__
+            .{
+              "name_N1": { "entity_identifier_code_01": "N5", "name_02": $$.podSigneeName },
+              "date_time_G62": { "date_qualifier_01": "35", "date_02": $$.shipmentStatusDetails.sentAtDate }
+            }
+      ),
+      "assigned_number_LX_loop": [
+        {
+          "assigned_number_LX": { "assigned_number_01": 1 },
+          "shipment_status_details_AT7_loop": {
+            "shipment_status_details_AT7": {
+              "shipment_status_code_01": $contains($$.shipmentStatusDetails.status, "APPOINTMENT")
+                ? $omitField
+                : $lookupTable($tables.SHIPMENT_STATUS_CODES, "Key", $$.shipmentStatusDetails.status).Value,
+              "shipment_status_or_appointment_reason_code_02": $contains($$.shipmentStatusDetails.status, "APPOINTMENT") ? $omitField : "NS",
+              "shipment_appointment_status_code_03": $contains($$.shipmentStatusDetails.status, "APPOINTMENT")
+                ? $lookupTable($tables.SHIPMENT_STATUS_CODES, "Key", $$.shipmentStatusDetails.status).Value
+                : $omitField,
+              "shipment_status_or_appointment_reason_code_04": $contains($$.shipmentStatusDetails.status, "APPOINTMENT") ? "NA" : $omitField,
+              "date_05": $contains($$.shipmentStatusDetails.status, "APPOINTMENT")
+                ? $$.shipmentStatusDetails.appointmentDate
+                : $$.shipmentStatusDetails.sentAtDate,
+              "time_06": $contains($$.shipmentStatusDetails.status, "APPOINTMENT")
+                ? $$.shipmentStatusDetails.appointmentTime
+                : $$.shipmentStatusDetails.sentAtTime
+            },
+            "equipment_shipment_or_real_property_location_MS1": {
+              "city_name_01": $$.shipmentStatusDetails.shipmentCity,
+              "state_or_province_code_02": $$.shipmentStatusDetails.shipmentState
+            }
+          },
+          "shipment_weight_packaging_and_quantity_data_AT8": [
+            {
+              "weight_qualifier_01": "G",
+              "weight_unit_code_02": "L",
+              "weight_03": $$.grossPackageDetails.weight,
+              "lading_quantity_04": $$.grossPackageDetails.quantity
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
