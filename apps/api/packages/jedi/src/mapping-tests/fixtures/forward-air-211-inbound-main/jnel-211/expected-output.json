@@ -1,0 +1,52 @@
+{
+  "senderId": "FWDA",
+  "receiverId": "JNEL",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "211",
+  "transactionSetPurposeCode": "ORIGINAL",
+  "standardCarrierAlphaCode": "JNEL",
+  "order": {
+    "mawb": "86713017",
+    "secondaryRefNumber": "CMH-472-86713017-00",
+    "deadlineDate": "2023-10-23",
+    "paymentMethod": "COLLECT",
+    "pickupOrDelivery": "DELIVERY",
+    "endStop": {
+      "specialInstructions": "065-Class 65LHS-Station Surcharge"
+    },
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "CMH-472-86713017-00"
+    }
+  },
+  "consigneeInformation": {
+    "name": "Magnetic Technologies LTD",
+    "addressLine1": "31 Highland Dr",
+    "city": "Putnam",
+    "state": "CT",
+    "zip": "06260",
+    "country": "US",
+    "contactName": "Sandy Navarro",
+    "contactPhone": "8604283990"
+  },
+  "shipperInformation": {
+    "name": "FORWARD AIR, INC",
+    "addressLine1": "315 ELLA GRASSO TURNPIKE",
+    "city": "WINDSOR LOCKS",
+    "state": "CT",
+    "zip": "06096",
+    "country": "US",
+    "contactName": "VINNIE CUSANO",
+    "contactPhone": "860-654-1733"
+  },
+  "packages": [
+    {
+      "description": "Machinery, Magnetic Drives",
+      "weight": 599,
+      "quantity": 1,
+      "length": 48,
+      "width": 19,
+      "height": 32,
+      "packageType": "PCS"
+    }
+  ]
+}

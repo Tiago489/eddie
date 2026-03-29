@@ -1,0 +1,52 @@
+{
+  "senderId": "FWDA",
+  "receiverId": "BRBF",
+  "usageIndicatorCode": "P",
+  "transactionSetIdentifierCode": "211",
+  "transactionSetPurposeCode": "CHANGE",
+  "standardCarrierAlphaCode": "BRBF",
+  "order": {
+    "mawb": "95945408",
+    "secondaryRefNumber": "SBN-472-95945408-00",
+    "deadlineDate": "2026-03-31",
+    "paymentMethod": "COLLECT",
+    "pickupOrDelivery": "DELIVERY",
+    "endStop": {
+      "specialInstructions": "250-Class 250LGD-Liftgate DeliveryLHS-Station SurchargeWCI-Weight Class Inspection Fee"
+    },
+    "standardOrderFields": {
+      "shipperBillOfLadingNumber": "SBN-472-95945408-00"
+    }
+  },
+  "consigneeInformation": {
+    "name": "Hessmer Nursing Home-TCM",
+    "addressLine1": "3707 Highway 114",
+    "city": "Hessmer",
+    "state": "LA",
+    "zip": "71341",
+    "country": "US",
+    "contactName": "Hessmer Nursing and Rehab",
+    "contactPhone": "3185634244"
+  },
+  "shipperInformation": {
+    "name": "BATON ROUGE CARGO",
+    "addressLine1": "1016 SOUTH WEST EVANGELINE",
+    "city": "LAFAYETTE",
+    "state": "LA",
+    "zip": "70508",
+    "country": "US",
+    "contactName": "KARL GUIDRY",
+    "contactPhone": "337-886-9590"
+  },
+  "packages": [
+    {
+      "description": "FAK",
+      "weight": 125,
+      "quantity": 1,
+      "length": 45,
+      "width": 36,
+      "height": 34,
+      "packageType": "PCS"
+    }
+  ]
+}

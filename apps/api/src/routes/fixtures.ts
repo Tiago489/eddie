@@ -31,14 +31,20 @@ function extractCarrier(mappingName: string): string {
 interface FixtureMeta {
   source: 'stedi' | 'generated';
   uploadedAt: string;
+  lastTestPassed: boolean;
 }
 
 async function readMeta(fixtureDir: string): Promise<FixtureMeta> {
   try {
     const raw = await fs.readFile(path.join(fixtureDir, 'meta.json'), 'utf-8');
-    return JSON.parse(raw) as FixtureMeta;
+    const parsed = JSON.parse(raw) as Partial<FixtureMeta>;
+    return {
+      source: parsed.source ?? 'generated',
+      uploadedAt: parsed.uploadedAt ?? '',
+      lastTestPassed: parsed.lastTestPassed ?? false,
+    };
   } catch {
-    return { source: 'generated', uploadedAt: '' };
+    return { source: 'generated', uploadedAt: '', lastTestPassed: false };
   }
 }
 
@@ -153,7 +159,12 @@ export async function fixturesRoutes(app: FastifyInstance) {
       await fs.mkdir(fixtureDir);
     }
 
-    const meta: FixtureMeta = { source, uploadedAt: new Date().toISOString() };
+    const outputMatches = JSON.stringify(mapResult.output) === JSON.stringify(expectedOutput);
+    // For stedi ground truth: pass if output matches (validation is advisory only)
+    // For generated: pass if output matches AND validation passes
+    const testPass = source === 'stedi' ? outputMatches : (outputMatches && validation.valid);
+
+    const meta: FixtureMeta = { source, uploadedAt: new Date().toISOString(), lastTestPassed: testPass };
 
     await Promise.all([
       fs.writeFile(path.join(fixtureDir, 'input.edi'), ediContent),
@@ -180,9 +191,6 @@ export async function fixturesRoutes(app: FastifyInstance) {
         }
       }
     }
-
-    const outputMatches = JSON.stringify(mapResult.output) === JSON.stringify(expectedOutput);
-    const testPass = outputMatches && validation.valid;
 
     return reply.send({
       success: true,
@@ -229,7 +237,7 @@ export async function fixturesRoutes(app: FastifyInstance) {
             source: meta.source,
             inputEdiPreview: ediContent.substring(0, 100),
             lastTestedAt: meta.uploadedAt || new Date().toISOString(),
-            lastTestPassed: true, // Use stored result; full re-test via CLI
+            lastTestPassed: meta.lastTestPassed,
           };
         } catch {
           return null;
