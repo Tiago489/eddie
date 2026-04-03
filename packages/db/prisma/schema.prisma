@@ -25,6 +25,7 @@ model TradingPartner {
   org       Organization            @relation(fields: [orgId], references: [id])
   name      String
   isaId     String
+  gsId      String    @default("")
   direction TradingPartnerDirection
   isActive  Boolean                 @default(true)
   createdAt DateTime                @default(now())
@@ -47,11 +48,13 @@ model SftpConnection {
   id                     String         @id @default(cuid())
   tradingPartnerId       String
   tradingPartner         TradingPartner @relation(fields: [tradingPartnerId], references: [id])
+  scac                   String    @default("")
   host                   String
   port                   Int            @default(22)
   username               String
   encryptedPassword      String
   remotePath             String
+  outboundRemotePath     String?
   archivePath            String
   pollingIntervalSeconds Int            @default(300)
   filePattern            String         @default("*.edi")
@@ -100,6 +103,7 @@ model DownstreamApi {
   name                 String
   baseUrl              String
   authType             AuthType     @default(NONE)
+  isDefault            Boolean      @default(false)
   encryptedCredentials String?
   headers              Json?
   timeoutMs            Int          @default(30000)

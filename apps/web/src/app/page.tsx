@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollText, CheckCircle, XCircle, Users } from 'lucide-react';
+import { ScrollText, CheckCircle, XCircle, Users, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold">Dashboard</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold">Dashboard</h2>
+        <Link href="/wizard" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+          <Wand2 className="h-4 w-4" />
+          Start Wizard
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>

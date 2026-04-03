@@ -17,8 +17,8 @@ export default function SftpConnectionsPage() {
   const { data, isLoading, mutate } = useSWR('sftp-connections', () => api.getSftpConnections(ORG_ID));
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    tradingPartnerId: '', host: '', port: '22', username: '', password: '',
-    remotePath: '/inbound', archivePath: '/archive', filePattern: '*.edi', pollingIntervalSeconds: '300',
+    tradingPartnerId: '', scac: '', host: '', port: '22', username: '', password: '',
+    remotePath: '/inbound', outboundRemotePath: '/outbound', archivePath: '/archive', filePattern: '*.edi', pollingIntervalSeconds: '300',
   });
 
   const connections = data?.data ?? [];
@@ -37,6 +37,7 @@ export default function SftpConnectionsPage() {
   }
 
   const columns = [
+    { header: 'SCAC', accessor: 'scac' as const },
     { header: 'Host', accessor: 'host' as const },
     { header: 'Port', accessor: (r: SftpConnection) => String(r.port) },
     { header: 'Username', accessor: 'username' as const },
@@ -55,7 +56,10 @@ export default function SftpConnectionsPage() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Create SFTP Connection</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-3">
-              <div><Label>Trading Partner ID</Label><Input required value={form.tradingPartnerId} onChange={(e) => setForm({ ...form, tradingPartnerId: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Trading Partner ID</Label><Input required value={form.tradingPartnerId} onChange={(e) => setForm({ ...form, tradingPartnerId: e.target.value })} /></div>
+                <div><Label>SCAC</Label><Input value={form.scac} onChange={(e) => setForm({ ...form, scac: e.target.value })} placeholder="Carrier SCAC" /></div>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2"><Label>Host</Label><Input required value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} /></div>
                 <div><Label>Port</Label><Input type="number" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} /></div>
@@ -64,8 +68,9 @@ export default function SftpConnectionsPage() {
                 <div><Label>Username</Label><Input required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></div>
                 <div><Label>Password</Label><Input type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div><Label>Remote Path</Label><Input value={form.remotePath} onChange={(e) => setForm({ ...form, remotePath: e.target.value })} /></div>
+                <div><Label>Outbound Path</Label><Input value={form.outboundRemotePath} onChange={(e) => setForm({ ...form, outboundRemotePath: e.target.value })} /></div>
                 <div><Label>Archive Path</Label><Input value={form.archivePath} onChange={(e) => setForm({ ...form, archivePath: e.target.value })} /></div>
               </div>
               <div className="grid grid-cols-2 gap-2">

@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import { createHash } from 'crypto';
 import { setupTestDb, teardownTestDb, getDb } from './helpers/db';
 import { createMockQueue } from './helpers/mock-queue';
+import { createMockLogger } from './helpers/mock-logger';
 import { MockTransport } from '@edi-platform/sftp';
 import { pollSftpJob } from '../jobs/poll-sftp.job';
 
@@ -137,5 +138,51 @@ describe('pollSftpJob', { timeout: 60000 }, () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('SftpConnection');
+  });
+
+  it('should log poll start, files found count, and each file outcome', async () => {
+    const mockTransport = new MockTransport();
+    mockTransport.addFile('/inbound/new.edi', RAW_EDI_204.replace('000000001', '000000099'));
+    const mockQueue = createMockQueue();
+    const logger = createMockLogger();
+
+    const result = await pollSftpJob(
+      { sftpConnectionId: sftpConnId },
+      { prisma: getDb(), transport: mockTransport, queues: { inboundEdi: mockQueue }, logger },
+    );
+
+    expect(result.success).toBe(true);
+
+    const infoMessages = logger.messages.filter((m) => m.level === 'info');
+    // Should log poll start with host and path
+    expect(infoMessages.some((m) => m.msg.includes('Polling') && m.msg.includes('localhost'))).toBe(true);
+    // Should log files found count
+    expect(infoMessages.some((m) => m.msg.includes('1 file'))).toBe(true);
+    // Should log the file being enqueued
+    expect(infoMessages.some((m) => m.msg.includes('new.edi') && m.msg.includes('enqueued'))).toBe(true);
+  });
+
+  it('should log when a file is skipped as duplicate', async () => {
+    const contentHash = createHash('sha256').update(RAW_EDI_204).digest('hex');
+
+    await getDb().transaction.create({
+      data: {
+        orgId, tradingPartnerId, transactionSet: 'EDI_204', direction: 'INBOUND',
+        status: 'DELIVERED', isaControlNumber: '000000001', contentHash, rawEdi: RAW_EDI_204,
+      },
+    });
+
+    const mockTransport = new MockTransport();
+    mockTransport.addFile('/inbound/dup.edi', RAW_EDI_204);
+    const mockQueue = createMockQueue();
+    const logger = createMockLogger();
+
+    await pollSftpJob(
+      { sftpConnectionId: sftpConnId },
+      { prisma: getDb(), transport: mockTransport, queues: { inboundEdi: mockQueue }, logger },
+    );
+
+    const infoMessages = logger.messages.filter((m) => m.level === 'info');
+    expect(infoMessages.some((m) => m.msg.includes('dup.edi') && m.msg.includes('skipped'))).toBe(true);
   });
 });

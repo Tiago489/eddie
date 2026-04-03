@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { encrypt } from '../lib/crypto';
+import { testSftpConnection } from '../lib/sftp-test';
 
 function omitPassword(record: Record<string, unknown>) {
   const { encryptedPassword, ...rest } = record;
@@ -7,6 +8,27 @@ function omitPassword(record: Record<string, unknown>) {
 }
 
 export async function sftpConnectionsRoutes(app: FastifyInstance) {
+  app.post('/test', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['host', 'username', 'password'],
+        properties: {
+          host: { type: 'string', minLength: 1 },
+          port: { type: 'integer', default: 22 },
+          username: { type: 'string', minLength: 1 },
+          password: { type: 'string', minLength: 1 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const { host, port, username, password } = request.body as {
+      host: string; port?: number; username: string; password: string;
+    };
+    const result = await testSftpConnection({ host, port: port ?? 22, username, password });
+    return reply.send(result);
+  });
+
   app.post('/', {
     schema: {
       body: {
@@ -17,7 +39,9 @@ export async function sftpConnectionsRoutes(app: FastifyInstance) {
           host: { type: 'string', minLength: 1 },
           username: { type: 'string', minLength: 1 },
           password: { type: 'string', minLength: 1 },
+          scac: { type: 'string' },
           remotePath: { type: 'string', minLength: 1 },
+          outboundRemotePath: { type: 'string' },
           archivePath: { type: 'string', minLength: 1 },
           port: { type: 'integer', default: 22 },
           pollingIntervalSeconds: { type: 'integer' },
@@ -27,9 +51,16 @@ export async function sftpConnectionsRoutes(app: FastifyInstance) {
     },
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
-    const { password, ...rest } = body;
+    const { password, tradingPartnerId, ...rest } = body;
+
+    const tp = await app.prisma.tradingPartner.findUnique({ where: { id: tradingPartnerId as string } });
+    if (!tp) {
+      return reply.status(400).send({ error: `Trading partner not found: ${tradingPartnerId}` });
+    }
+
     const data = {
       ...rest,
+      tradingPartnerId,
       encryptedPassword: encrypt(password as string),
     };
     const record = await app.prisma.sftpConnection.create({ data: data as any });

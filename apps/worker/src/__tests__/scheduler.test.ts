@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { setupTestDb, teardownTestDb, getDb } from './helpers/db';
 import { schedulePollers, type SchedulerQueue } from '../scheduler';
+import { createMockLogger } from './helpers/mock-logger';
 
 describe('schedulePollers', { timeout: 60000 }, () => {
   let orgId: string;
@@ -57,5 +58,41 @@ describe('schedulePollers', { timeout: 60000 }, () => {
 
     expect(count).toBe(2);
     expect(jobs).toHaveLength(2);
+  });
+
+  it('should log each active connection being scheduled', async () => {
+    const mockQueue: SchedulerQueue = { add: async () => {} };
+    const logger = createMockLogger();
+
+    await schedulePollers(getDb(), mockQueue, logger);
+
+    const infoMessages = logger.messages.filter((m) => m.level === 'info');
+    // Should log the count of active connections found
+    expect(infoMessages.some((m) => m.msg.includes('2'))).toBe(true);
+    // Should log each connection host being scheduled
+    expect(infoMessages.some((m) => m.msg.includes('a:22'))).toBe(true);
+    expect(infoMessages.some((m) => m.msg.includes('b:22'))).toBe(true);
+    // Should NOT log the inactive connection
+    expect(infoMessages.some((m) => m.msg.includes('c:22'))).toBe(false);
+  });
+
+  it('should log warning when no active connections found', async () => {
+    // Deactivate all connections
+    await getDb().sftpConnection.updateMany({ data: { isActive: false } });
+
+    const mockQueue: SchedulerQueue = { add: async () => {} };
+    const logger = createMockLogger();
+
+    const count = await schedulePollers(getDb(), mockQueue, logger);
+
+    expect(count).toBe(0);
+    const warnMessages = logger.messages.filter((m) => m.level === 'warn');
+    expect(warnMessages.some((m) => m.msg.includes('No active SFTP connections'))).toBe(true);
+
+    // Restore
+    await getDb().sftpConnection.updateMany({
+      where: { host: { in: ['a', 'b'] } },
+      data: { isActive: true },
+    });
   });
 });

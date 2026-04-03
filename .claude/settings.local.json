@@ -88,7 +88,15 @@
       "Bash(timeout 10 tsx scripts/deep-diff.ts)",
       "Bash(timeout 15 tsx scripts/regen-exp-fixtures.ts)",
       "Bash(__NEW_LINE_3cfbeaba4cccfc44__ echo:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:www.notion.so)",
+      "Bash(npx prisma:*)",
+      "Bash(ls /home/tiago/Projects/Eddie/node_modules/.pnpm/ssh2-sftp-client*)",
+      "Bash(pnpm --filter @edi-platform/api add ssh2-sftp-client)",
+      "Bash(pnpm --filter @edi-platform/api add -D @types/ssh2-sftp-client)",
+      "Bash(pnpm --filter @edi-platform/api test -- --reporter=verbose)",
+      "Bash(pnpm --filter @edi-platform/worker test -- --run)",
+      "Bash(ls /home/tiago/Projects/Eddie/vitest*)"
     ]
   },
   "hooks": {

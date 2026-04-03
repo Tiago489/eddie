@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Server, GitBranch, Wand2, Plug, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Users, Server, GitBranch, Wand2, Plug, ScrollText, FlaskConical } from 'lucide-react';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,6 +16,7 @@ const navItems = [
   { href: '/wizard', label: 'Flow Wizard', icon: Wand2 },
   { href: '/downstream-apis', label: 'Downstream APIs', icon: Plug },
   { href: '/transactions', label: 'Transactions', icon: ScrollText },
+  { href: '/wizard/test', label: 'EDI Test Wizard', icon: FlaskConical },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

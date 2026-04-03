@@ -5,21 +5,26 @@ export async function tradingPartnersRoutes(app: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['orgId', 'name', 'isaId', 'direction'],
+        required: ['orgId', 'name', 'isaId', 'gsId', 'direction'],
         properties: {
           orgId: { type: 'string', minLength: 1 },
           name: { type: 'string', minLength: 1 },
           isaId: { type: 'string', minLength: 1, maxLength: 15 },
+          gsId: { type: 'string', minLength: 1 },
           direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND', 'BOTH'] },
         },
       },
     },
   }, async (request, reply) => {
-    const { orgId, name, isaId, direction } = request.body as {
-      orgId: string; name: string; isaId: string; direction: string;
+    const { orgId, name, isaId, gsId, direction } = request.body as {
+      orgId: string; name: string; isaId: string; gsId: string; direction: string;
     };
+    const existing = await app.prisma.tradingPartner.findFirst({ where: { isaId, orgId } });
+    if (existing) {
+      return reply.status(409).send({ error: 'A trading partner with this ISA ID already exists' });
+    }
     const tp = await app.prisma.tradingPartner.create({
-      data: { orgId, name, isaId, direction: direction as 'INBOUND' | 'OUTBOUND' | 'BOTH', isActive: true },
+      data: { orgId, name, isaId, gsId, direction: direction as 'INBOUND' | 'OUTBOUND' | 'BOTH', isActive: true },
     });
     return reply.status(201).send(tp);
   });
@@ -40,6 +45,18 @@ export async function tradingPartnersRoutes(app: FastifyInstance) {
   });
 
   app.put('/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const existing = await app.prisma.tradingPartner.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
+    const body = request.body as Record<string, unknown>;
+    const tp = await app.prisma.tradingPartner.update({
+      where: { id },
+      data: body,
+    });
+    return reply.send(tp);
+  });
+
+  app.patch('/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const existing = await app.prisma.tradingPartner.findUnique({ where: { id } });
     if (!existing) return reply.status(404).send({ error: 'Not found' });

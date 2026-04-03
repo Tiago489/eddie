@@ -57,6 +57,58 @@ describe('Downstream APIs', { timeout: 60000 }, () => {
     expect(body.data[0].encryptedCredentials).toBeUndefined();
   });
 
+  it('PATCH /api/downstream-apis/:id/set-default — sets as default', async () => {
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/api/downstream-apis/${createdId}/set-default`,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().isDefault).toBe(true);
+  });
+
+  it('PATCH /api/downstream-apis/:id/set-default — clears previous default', async () => {
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/api/downstream-apis',
+      payload: { orgId, name: 'Second API', baseUrl: 'https://second.example.com', authType: 'NONE' },
+    });
+    const secondId = res2.json().id;
+
+    await app.inject({ method: 'PATCH', url: `/api/downstream-apis/${secondId}/set-default` });
+
+    const prev = await getDb().downstreamApi.findUnique({ where: { id: createdId } });
+    expect(prev?.isDefault).toBe(false);
+
+    const curr = await getDb().downstreamApi.findUnique({ where: { id: secondId } });
+    expect(curr?.isDefault).toBe(true);
+
+    // cleanup
+    await getDb().downstreamApi.delete({ where: { id: secondId } });
+  });
+
+  it('GET /api/downstream-apis?default=true — returns default record', async () => {
+    await app.inject({ method: 'PATCH', url: `/api/downstream-apis/${createdId}/set-default` });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/downstream-apis?default=true',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.id).toBe(createdId);
+    expect(res.json().data.isDefault).toBe(true);
+  });
+
+  it('GET /api/downstream-apis?default=true — returns null when no default', async () => {
+    await getDb().downstreamApi.updateMany({ data: { isDefault: false } });
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/downstream-apis?default=true',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toBeNull();
+  });
+
   it('DELETE /api/downstream-apis/:id — deletes', async () => {
     const res = await app.inject({
       method: 'DELETE',

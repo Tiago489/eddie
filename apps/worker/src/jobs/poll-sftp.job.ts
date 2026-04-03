@@ -1,6 +1,8 @@
 import { createHash } from 'crypto';
 import type { PrismaClient } from '@edi-platform/db';
 import type { FileTransport } from '@edi-platform/types';
+import type { Logger } from '../lib/logger';
+import { consoleLogger } from '../lib/logger';
 
 export interface PollSftpPayload {
   sftpConnectionId: string;
@@ -10,6 +12,7 @@ export interface PollSftpDeps {
   prisma: PrismaClient;
   transport?: FileTransport;
   queues: { inboundEdi: { add: (name: string, data: unknown) => Promise<void> } };
+  logger?: Logger;
 }
 
 export interface PollSftpResult {
@@ -26,6 +29,7 @@ export async function pollSftpJob(
   deps: PollSftpDeps,
 ): Promise<PollSftpResult> {
   const { prisma } = deps;
+  const logger = deps.logger ?? consoleLogger;
 
   const conn = await prisma.sftpConnection.findUnique({
     where: { id: payload.sftpConnectionId },
@@ -42,9 +46,27 @@ export async function pollSftpJob(
     };
   }
 
+  logger.info(`Polling ${conn.host}:${conn.port} ${conn.remotePath}`);
+
   const transport = deps.transport!;
 
-  const filePaths = await transport.listFiles(conn.remotePath, conn.filePattern ?? '*.edi');
+  let filePaths: string[];
+  try {
+    filePaths = await transport.listFiles(conn.remotePath, conn.filePattern ?? '*.edi');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`SFTP listFiles failed for ${conn.host}:${conn.port}: ${msg}`);
+    return {
+      success: false,
+      filesFound: 0,
+      filesEnqueued: 0,
+      filesSkipped: 0,
+      error: `listFiles failed: ${msg}`,
+    };
+  }
+
+  const fileWord = filePaths.length === 1 ? 'file' : 'files';
+  logger.info(`Found ${filePaths.length} ${fileWord} on ${conn.host}:${conn.port}`);
 
   let filesEnqueued = 0;
   let filesSkipped = 0;
@@ -66,6 +88,7 @@ export async function pollSftpJob(
 
       if (existing) {
         filesSkipped++;
+        logger.info(`${fileName} skipped — duplicate`);
       } else {
         await deps.queues.inboundEdi.add('process-inbound', {
           rawEdi: content.toString(),
@@ -74,12 +97,13 @@ export async function pollSftpJob(
           sourceFile: fileName,
         });
         filesEnqueued++;
+        logger.info(`${fileName} enqueued`);
       }
 
       await transport.archiveFile(filePath, `${conn.archivePath}/${fileName}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[poll-sftp] Failed to process file ${filePath}: ${msg}`);
+      logger.error(`Failed to process file ${filePath}: ${msg}`);
       errors.push({ file: filePath, error: msg });
     }
   }

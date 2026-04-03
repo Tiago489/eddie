@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { ORG_ID } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -36,14 +37,31 @@ export default function DownstreamApisPage() {
     mutate();
   }
 
+  async function handleSetDefault(id: string) {
+    await api.setDefaultDownstreamApi(id);
+    mutate();
+  }
+
   const authLabels: Record<string, string> = { API_KEY: 'API Key', BEARER: 'Bearer Token', BASIC: 'username:password' };
 
   const columns = [
-    { header: 'Name', accessor: 'name' as const },
+    { header: 'Name', accessor: (r: DownstreamApi) => (
+      <span className="flex items-center gap-2">
+        {r.name}
+        {r.isDefault && <Badge variant="success">Default</Badge>}
+      </span>
+    ) },
     { header: 'Base URL', accessor: 'baseUrl' as const },
     { header: 'Auth', accessor: 'authType' as const },
     { header: 'Timeout', accessor: (r: DownstreamApi) => `${r.timeoutMs}ms` },
-    { header: 'Actions', accessor: (r: DownstreamApi) => <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)}>Delete</Button> },
+    { header: 'Actions', accessor: (r: DownstreamApi) => (
+      <div className="flex gap-1">
+        {!r.isDefault && (
+          <Button variant="outline" size="sm" onClick={() => handleSetDefault(r.id)}>Set as Default</Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)}>Delete</Button>
+      </div>
+    ) },
   ];
 
   return (

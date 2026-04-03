@@ -84,7 +84,8 @@ export async function send997Job(
 
   const transport = deps.transport!;
   const filename = `997_${tx.isaControlNumber}_${Date.now()}.edi`;
-  const path = `${sftpConn.remotePath}/${filename}`;
+  const outDir = sftpConn.outboundRemotePath ?? sftpConn.remotePath;
+  const path = `${outDir}/${filename}`;
 
   try {
     await transport.putFile(path, Buffer.from(edi997));

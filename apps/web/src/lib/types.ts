@@ -3,6 +3,7 @@ export interface TradingPartner {
   orgId: string;
   name: string;
   isaId: string;
+  gsId: string;
   direction: 'INBOUND' | 'OUTBOUND' | 'BOTH';
   isActive: boolean;
   createdAt: string;
@@ -12,10 +13,12 @@ export interface TradingPartner {
 export interface SftpConnection {
   id: string;
   tradingPartnerId: string;
+  scac: string;
   host: string;
   port: number;
   username: string;
   remotePath: string;
+  outboundRemotePath: string | null;
   archivePath: string;
   pollingIntervalSeconds: number;
   filePattern: string;
@@ -50,6 +53,7 @@ export interface DownstreamApi {
   name: string;
   baseUrl: string;
   authType: 'NONE' | 'API_KEY' | 'BEARER' | 'BASIC';
+  isDefault: boolean;
   headers?: Record<string, string>;
   timeoutMs: number;
   createdAt: string;

@@ -27,6 +27,24 @@ describe('SFTP Connections API', { timeout: 60000 }, () => {
     await teardownTestDb();
   });
 
+  it('POST /api/sftp-connections — returns 400 for invalid tradingPartnerId', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/sftp-connections',
+      payload: {
+        tradingPartnerId: 'nonexistent-tp-id',
+        host: 'sftp.example.com',
+        port: 22,
+        username: 'ediuser',
+        password: 'secret123',
+        remotePath: '/inbound',
+        archivePath: '/archive',
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain('Trading partner not found');
+  });
+
   it('POST /api/sftp-connections — creates with encrypted password', async () => {
     const res = await app.inject({
       method: 'POST',

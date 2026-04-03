@@ -31,6 +31,9 @@ export const api = {
   deleteTradingPartner: (id: string) =>
     apiFetch(`/api/trading-partners/${id}`, { method: 'DELETE' }),
 
+  patchTradingPartner: (id: string, body: unknown) =>
+    apiFetch<TradingPartner>(`/api/trading-partners/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+
   getSftpConnections: (orgId: string) =>
     apiFetch<{ data: SftpConnection[] }>(`/api/sftp-connections?orgId=${orgId}`),
   createSftpConnection: (body: unknown) =>
@@ -39,6 +42,8 @@ export const api = {
     apiFetch<SftpConnection>(`/api/sftp-connections/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteSftpConnection: (id: string) =>
     apiFetch(`/api/sftp-connections/${id}`, { method: 'DELETE' }),
+  testSftpConnection: (body: { host: string; port: number; username: string; password: string }) =>
+    apiFetch<{ success: boolean; message: string }>('/api/sftp-connections/test', { method: 'POST', body: JSON.stringify(body) }),
 
   getMappings: (orgId: string, showAll = false) =>
     apiFetch<{ data: Mapping[] }>(`/api/mappings?orgId=${orgId}${showAll ? '&showAll=true' : ''}`),
@@ -69,6 +74,10 @@ export const api = {
 
   getDownstreamApis: (orgId: string) =>
     apiFetch<{ data: DownstreamApi[] }>(`/api/downstream-apis?orgId=${orgId}`),
+  getDefaultDownstreamApi: () =>
+    apiFetch<{ data: DownstreamApi | null }>('/api/downstream-apis?default=true'),
+  setDefaultDownstreamApi: (id: string) =>
+    apiFetch<DownstreamApi>(`/api/downstream-apis/${id}/set-default`, { method: 'PATCH' }),
   createDownstreamApi: (body: unknown) =>
     apiFetch<DownstreamApi>('/api/downstream-apis', { method: 'POST', body: JSON.stringify(body) }),
   updateDownstreamApi: (id: string, body: unknown) =>

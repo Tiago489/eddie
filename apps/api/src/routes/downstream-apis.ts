@@ -34,9 +34,16 @@ export async function downstreamApisRoutes(app: FastifyInstance) {
   });
 
   app.get('/', async (request, reply) => {
-    const { orgId } = request.query as { orgId?: string };
+    const query = request.query as { orgId?: string; default?: string };
+    if (query.default === 'true') {
+      const record = await app.prisma.downstreamApi.findFirst({
+        where: { isDefault: true, ...(query.orgId ? { orgId: query.orgId } : {}) },
+      });
+      if (!record) return reply.send({ data: null });
+      return reply.send({ data: omitCredentials(record as unknown as Record<string, unknown>) });
+    }
     const data = await app.prisma.downstreamApi.findMany({
-      where: orgId ? { orgId } : {},
+      where: query.orgId ? { orgId: query.orgId } : {},
     });
     return reply.send({ data: data.map((r) => omitCredentials(r as unknown as Record<string, unknown>)) });
   });
@@ -61,6 +68,18 @@ export async function downstreamApisRoutes(app: FastifyInstance) {
       if (key !== 'credentials') updateData[key] = value;
     }
     const record = await app.prisma.downstreamApi.update({ where: { id }, data: updateData as any });
+    return reply.send(omitCredentials(record as unknown as Record<string, unknown>));
+  });
+
+  app.patch('/:id/set-default', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const existing = await app.prisma.downstreamApi.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: 'Not found' });
+    await app.prisma.$transaction([
+      app.prisma.downstreamApi.updateMany({ where: { isDefault: true }, data: { isDefault: false } }),
+      app.prisma.downstreamApi.update({ where: { id }, data: { isDefault: true } }),
+    ]);
+    const record = await app.prisma.downstreamApi.findUnique({ where: { id } });
     return reply.send(omitCredentials(record as unknown as Record<string, unknown>));
   });
 

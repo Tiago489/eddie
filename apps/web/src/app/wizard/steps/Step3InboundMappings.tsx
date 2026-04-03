@@ -1,0 +1,171 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { api } from '@/lib/api';
+import { ORG_ID } from '@/lib/constants';
+import type { Mapping } from '@/lib/types';
+import type { WizardState, WizardMappingEntry } from '../hooks/useWizardState';
+
+const INBOUND_SETS = [
+  { value: 'EDI_204', label: '204 - Load Tender' },
+  { value: 'EDI_211', label: '211 - BOL' },
+  { value: 'EDI_997', label: '997 - Functional Acknowledgment' },
+];
+
+interface RowState {
+  transactionSet: string;
+  mode: 'existing' | 'new' | 'skip';
+  existingMappingId: string;
+  newName: string;
+  newExpression: string;
+  testResult: string | null;
+}
+
+interface Props {
+  state: WizardState;
+  onNext: (data: { inboundMappings: WizardMappingEntry[] }) => void;
+  onBack: () => void;
+}
+
+export function Step3InboundMappings({ state, onNext, onBack }: Props) {
+  const [existingMappings, setExistingMappings] = useState<Mapping[]>([]);
+  const [rows, setRows] = useState<RowState[]>(
+    INBOUND_SETS.map((s) => ({
+      transactionSet: s.value,
+      mode: 'skip',
+      existingMappingId: '',
+      newName: '',
+      newExpression: '',
+      testResult: null,
+    })),
+  );
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api.getMappings(ORG_ID).then((res) => setExistingMappings(res.data)).catch(() => {});
+  }, []);
+
+  function updateRow(idx: number, partial: Partial<RowState>) {
+    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...partial } : r)));
+  }
+
+  async function handleTest(idx: number) {
+    const row = rows[idx];
+    if (!row.newExpression.trim()) return;
+    try {
+      // Create temp mapping to test
+      const mapping = await api.createMapping({
+        orgId: ORG_ID,
+        name: row.newName || `${row.transactionSet} test`,
+        transactionSet: row.transactionSet,
+        direction: 'INBOUND',
+        jsonataExpression: row.newExpression,
+      });
+      const result = await api.testMapping(mapping.id, { test: true });
+      updateRow(idx, {
+        testResult: result.success ? 'Expression is valid' : (result.error ?? 'Test failed'),
+        existingMappingId: mapping.id,
+        mode: 'new',
+      });
+    } catch (err) {
+      updateRow(idx, { testResult: err instanceof Error ? err.message : 'Test failed' });
+    }
+  }
+
+  async function handleSubmit() {
+    setError('');
+    setSubmitting(true);
+
+    try {
+      const mappings: WizardMappingEntry[] = [];
+
+      for (const row of rows) {
+        if (row.mode === 'skip') continue;
+
+        if (row.mode === 'existing') {
+          if (!row.existingMappingId) continue;
+          const existingMapping = existingMappings.find((m) => m.id === row.existingMappingId);
+          mappings.push({ transactionSet: row.transactionSet, mappingId: row.existingMappingId, mappingName: existingMapping?.name ?? row.existingMappingId });
+        } else if (row.mode === 'new') {
+          if (row.existingMappingId) {
+            // Already created during test
+            const name = row.newName || `${row.transactionSet} Inbound`;
+            mappings.push({ transactionSet: row.transactionSet, mappingId: row.existingMappingId, mappingName: name });
+          } else {
+            if (!row.newExpression.trim()) { setError(`Expression required for ${row.transactionSet}`); setSubmitting(false); return; }
+            const name = row.newName || `${row.transactionSet} Inbound`;
+            const mapping = await api.createMapping({
+              orgId: ORG_ID,
+              name,
+              transactionSet: row.transactionSet,
+              direction: 'INBOUND',
+              jsonataExpression: row.newExpression,
+            });
+            mappings.push({ transactionSet: row.transactionSet, mappingId: mapping.id, mappingName: name });
+          }
+        }
+      }
+
+      onNext({ inboundMappings: mappings });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      <h3 className="text-lg font-semibold">Step 3: Inbound Mappings</h3>
+      <p className="text-sm text-slate-500">Configure JSONata mappings for inbound transaction sets. All rows are optional.</p>
+
+      {INBOUND_SETS.map((set, idx) => {
+        const row = rows[idx];
+        const matchingMappings = existingMappings.filter(
+          (m) => m.transactionSet === set.value && m.direction === 'INBOUND',
+        );
+        return (
+          <div key={set.value} className="border rounded-md p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="font-semibold">{set.label}</Label>
+              <Select value={row.mode} onChange={(e) => updateRow(idx, { mode: e.target.value as RowState['mode'] })}>
+                <option value="skip">Skip</option>
+                <option value="existing">Use Existing</option>
+                <option value="new">Create New</option>
+              </Select>
+            </div>
+            {row.mode === 'existing' && (
+              <Select value={row.existingMappingId} onChange={(e) => updateRow(idx, { existingMappingId: e.target.value })}>
+                <option value="">Select mapping...</option>
+                {matchingMappings.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </Select>
+            )}
+            {row.mode === 'new' && (
+              <div className="space-y-2">
+                <Input placeholder="Mapping name" value={row.newName} onChange={(e) => updateRow(idx, { newName: e.target.value })} />
+                <Textarea placeholder="JSONata expression" rows={3} value={row.newExpression} onChange={(e) => updateRow(idx, { newExpression: e.target.value })} />
+                <div className="flex items-center gap-3">
+                  <Button type="button" variant="outline" size="sm" onClick={() => handleTest(idx)}>Test</Button>
+                  {row.testResult && <span className="text-xs text-slate-600">{row.testResult}</span>}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex gap-3">
+        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
+        <Button onClick={handleSubmit} disabled={submitting}>{submitting ? 'Saving...' : 'Next'}</Button>
+      </div>
+    </div>
+  );
+}
