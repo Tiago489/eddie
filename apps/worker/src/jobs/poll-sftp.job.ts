@@ -8,9 +8,12 @@ export interface PollSftpPayload {
   sftpConnectionId: string;
 }
 
+export type TransportFactory = (conn: { host: string; port: number; username: string; encryptedPassword: string }) => FileTransport;
+
 export interface PollSftpDeps {
   prisma: PrismaClient;
   transport?: FileTransport;
+  createTransport?: TransportFactory;
   queues: { inboundEdi: { add: (name: string, data: unknown) => Promise<void> } };
   logger?: Logger;
 }
@@ -48,7 +51,7 @@ export async function pollSftpJob(
 
   logger.info(`Polling ${conn.host}:${conn.port} ${conn.remotePath}`);
 
-  const transport = deps.transport!;
+  const transport = deps.transport ?? deps.createTransport!(conn);
 
   let filePaths: string[];
   try {

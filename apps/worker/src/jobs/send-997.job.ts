@@ -6,9 +6,12 @@ export interface Send997Payload {
   transactionId: string;
 }
 
+export type TransportFactory = (conn: { host: string; port: number; username: string; encryptedPassword: string }) => FileTransport;
+
 export interface Send997Deps {
   prisma: PrismaClient;
   transport?: FileTransport;
+  createTransport?: TransportFactory;
 }
 
 export interface Send997Result {
@@ -82,7 +85,7 @@ export async function send997Job(
 
   const edi997 = segments.join('\n');
 
-  const transport = deps.transport!;
+  const transport = deps.transport ?? deps.createTransport!(sftpConn);
   const filename = `997_${tx.isaControlNumber}_${Date.now()}.edi`;
   const outDir = sftpConn.outboundRemotePath ?? sftpConn.remotePath;
   const path = `${outDir}/${filename}`;

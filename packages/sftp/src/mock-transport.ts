@@ -15,8 +15,9 @@ export class MockTransport implements FileTransport {
       if (!filePath.startsWith(remotePath)) continue;
 
       if (pattern) {
-        const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\?/g, '.'));
-        if (!regex.test(filePath)) continue;
+        const fileName = filePath.split('/').pop() ?? filePath;
+        const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+        if (!regex.test(fileName)) continue;
       }
 
       result.push(filePath);

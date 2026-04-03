@@ -96,7 +96,8 @@
       "Bash(pnpm --filter @edi-platform/api add -D @types/ssh2-sftp-client)",
       "Bash(pnpm --filter @edi-platform/api test -- --reporter=verbose)",
       "Bash(pnpm --filter @edi-platform/worker test -- --run)",
-      "Bash(ls /home/tiago/Projects/Eddie/vitest*)"
+      "Bash(ls /home/tiago/Projects/Eddie/vitest*)",
+      "Bash(cat /home/tiago/Projects/Eddie/packages/*/package.json)"
     ]
   },
   "hooks": {

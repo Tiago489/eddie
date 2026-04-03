@@ -2,10 +2,12 @@ import 'dotenv/config';
 import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import { PrismaClient } from '@edi-platform/db';
+import { SftpTransport } from '@edi-platform/sftp';
 import { QUEUE_NAMES } from './queues';
 import { schedulePollers } from './scheduler';
 import { consoleLogger } from './lib/logger';
 import { decrypt } from './lib/crypto';
+import { pollSftpJob } from './jobs/poll-sftp.job';
 import { processInboundJob } from './jobs/process-inbound.job';
 import { processOutboundJob } from './jobs/process-outbound.job';
 import { send997Job } from './jobs/send-997.job';
@@ -13,6 +15,15 @@ import { send997Job } from './jobs/send-997.job';
 export { queues } from './queues';
 
 const logger = consoleLogger;
+
+function createTransport(conn: { host: string; port: number; username: string; encryptedPassword: string }) {
+  return new SftpTransport({
+    host: conn.host,
+    port: conn.port,
+    username: conn.username,
+    password: decrypt(conn.encryptedPassword),
+  });
+}
 
 async function main() {
   logger.info('Worker started');
@@ -29,45 +40,23 @@ async function main() {
   const count = await schedulePollers(prisma, sftpPollQueue, logger);
   logger.info(`Scheduled ${count} poller(s)`);
 
-  // sftp-poll: poll SFTP servers for new EDI files
   new Worker(QUEUE_NAMES.SFTP_POLL, async (job) => {
-    const { SftpTransport } = await import('@edi-platform/sftp');
-    const { pollSftpJob } = await import('./jobs/poll-sftp.job');
-
-    const conn = await prisma.sftpConnection.findUnique({
-      where: { id: job.data.sftpConnectionId },
-    });
-
-    if (!conn) {
-      logger.error(`SftpConnection ${job.data.sftpConnectionId} not found`);
-      return;
-    }
-
     try {
-      const password = decrypt(conn.encryptedPassword);
-      const transport = new SftpTransport({
-        host: conn.host,
-        port: conn.port,
-        username: conn.username,
-        password,
-      });
-
       const result = await pollSftpJob(
-        { sftpConnectionId: conn.id },
-        { prisma, transport, queues: { inboundEdi: inboundEdiQueue }, logger },
+        { sftpConnectionId: job.data.sftpConnectionId },
+        { prisma, createTransport, queues: { inboundEdi: inboundEdiQueue }, logger },
       );
 
       if (!result.success) {
-        logger.error(`Poll failed for ${conn.host}:${conn.port}: ${result.error ?? 'file errors'}`);
+        logger.error(`Poll failed: ${result.error ?? 'file errors'}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.error(`Poll error for ${conn.host}:${conn.port}: ${msg}`);
+      logger.error(`Poll error: ${msg}`);
       throw err;
     }
   }, { connection: redis });
 
-  // inbound-edi: parse EDI, transform to JEDI, deliver downstream
   new Worker(QUEUE_NAMES.INBOUND_EDI, async (job) => {
     logger.info(`Processing inbound EDI job ${job.id}`);
     try {
@@ -88,7 +77,6 @@ async function main() {
     }
   }, { connection: redis });
 
-  // outbound-edi: transform JSON to EDI and deliver
   new Worker(QUEUE_NAMES.OUTBOUND_EDI, async (job) => {
     logger.info(`Processing outbound EDI job ${job.id}`);
     try {
@@ -109,27 +97,10 @@ async function main() {
     }
   }, { connection: redis });
 
-  // ack-997: generate and send 997 Functional Acknowledgment
   new Worker(QUEUE_NAMES.ACK_997, async (job) => {
     logger.info(`Processing 997 ack job ${job.id}`);
     try {
-      const conn = await prisma.sftpConnection.findFirst({
-        where: { isActive: true },
-      });
-
-      let transport;
-      if (conn) {
-        const { SftpTransport } = await import('@edi-platform/sftp');
-        const password = decrypt(conn.encryptedPassword);
-        transport = new SftpTransport({
-          host: conn.host,
-          port: conn.port,
-          username: conn.username,
-          password,
-        });
-      }
-
-      const result = await send997Job(job.data, { prisma, transport });
+      const result = await send997Job(job.data, { prisma, createTransport });
       if (result.success) {
         logger.info(`997 ack job ${job.id} succeeded`);
       } else {
