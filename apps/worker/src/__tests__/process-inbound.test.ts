@@ -250,4 +250,72 @@ describe('processInboundJob', { timeout: 60000 }, () => {
       data: { isActive: true },
     });
   });
+
+  it('should prefer partner-specific mapping over generic org mapping', async () => {
+    const prisma = getDb();
+
+    // Create a partner-specific mapping that returns a distinct shape
+    const partnerMapping = await prisma.mapping.create({
+      data: {
+        orgId,
+        tradingPartnerId,
+        name: 'Partner-specific 204',
+        transactionSet: 'EDI_204',
+        direction: 'INBOUND',
+        jsonataExpression: '{ "partnerSpecific": true, "from": "partner-mapping" }',
+        version: 1,
+        isActive: true,
+      },
+    });
+
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, { ok: true });
+    server.listen();
+
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId, orgId },
+      { prisma, queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    expect(result.success).toBe(true);
+
+    const tx = await prisma.transaction.findFirst();
+    expect(tx?.outboundPayload).toEqual({ partnerSpecific: true, from: 'partner-mapping' });
+
+    await prisma.mapping.delete({ where: { id: partnerMapping.id } });
+  });
+
+  it('should fall back to generic mapping when no partner-specific mapping exists', async () => {
+    const prisma = getDb();
+
+    // Create a second trading partner with NO partner-specific mapping
+    const tp2 = await prisma.tradingPartner.create({
+      data: { orgId, name: 'Other Partner', isaId: 'OTHER01', isActive: true, direction: 'INBOUND' },
+    });
+
+    const queue = createMockQueue();
+    const server = createMockApi('http://mock-api.test', 200, { ok: true });
+    server.listen();
+
+    // Process with tp2 — should use the generic (no tradingPartnerId) mapping
+    const result = await processInboundJob(
+      { rawEdi: RAW_EDI_204, tradingPartnerId: tp2.id, orgId },
+      { prisma, queues: { ack997: queue } },
+    );
+
+    server.close();
+
+    expect(result.success).toBe(true);
+
+    const tx = await prisma.transaction.findFirst({ orderBy: { createdAt: 'desc' } });
+    // The generic "Identity 204" mapping returns $$ (the full JEDI), so outbound === jedi
+    expect(tx?.outboundPayload).toEqual(tx?.jediPayload);
+
+    // Cleanup: delete transaction first (FK constraint), then partner
+    await prisma.transactionEvent.deleteMany({ where: { transaction: { tradingPartnerId: tp2.id } } });
+    await prisma.transaction.deleteMany({ where: { tradingPartnerId: tp2.id } });
+    await prisma.tradingPartner.delete({ where: { id: tp2.id } });
+  });
 });

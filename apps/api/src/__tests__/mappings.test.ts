@@ -188,6 +188,56 @@ describe('Mappings API', { timeout: 60000 }, () => {
     await getDb().mapping.delete({ where: { id: mapping.id } });
   });
 
+  it('PUT /api/mappings/:id — assign tradingPartnerId', async () => {
+    const tp = await getDb().tradingPartner.create({
+      data: { orgId, name: 'Ceva', isaId: 'CEVAPD', isActive: true, direction: 'INBOUND' },
+    });
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/mappings/${createdId}`,
+      payload: { tradingPartnerId: tp.id },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().tradingPartnerId).toBe(tp.id);
+
+    // Verify it persisted
+    const mapping = await getDb().mapping.findUnique({ where: { id: createdId } });
+    expect(mapping?.tradingPartnerId).toBe(tp.id);
+  });
+
+  it('POST /api/trading-partners/:id/mappings — bulk assign mappings', async () => {
+    const tp = await getDb().tradingPartner.findFirst({ where: { orgId, name: 'Ceva' } });
+
+    const m1 = await getDb().mapping.create({
+      data: {
+        orgId, name: 'Ceva 204', transactionSet: 'EDI_204', direction: 'INBOUND',
+        jsonataExpression: '$$', version: 1, isActive: true,
+      },
+    });
+    const m2 = await getDb().mapping.create({
+      data: {
+        orgId, name: 'Ceva 990', transactionSet: 'EDI_990', direction: 'OUTBOUND',
+        jsonataExpression: '$$', version: 1, isActive: true,
+      },
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/trading-partners/${tp!.id}/mappings`,
+      payload: { mappingIds: [m1.id, m2.id] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().updated).toBe(2);
+
+    const updated1 = await getDb().mapping.findUnique({ where: { id: m1.id } });
+    const updated2 = await getDb().mapping.findUnique({ where: { id: m2.id } });
+    expect(updated1?.tradingPartnerId).toBe(tp!.id);
+    expect(updated2?.tradingPartnerId).toBe(tp!.id);
+  });
+
   it('POST /api/mappings/:id/test — bad JSONata returns error', async () => {
     // Create a mapping with bad expression
     const bad = await getDb().mapping.create({

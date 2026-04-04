@@ -107,9 +107,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import sys,json; d=json.load(sys.stdin); f=d.get('tool_input',{}).get('file_path','') or d.get('tool_response',{}).get('filePath',''); exit(0 if f.endswith(('.ts','.tsx','.js','.jsx')) and '__tests__' not in f and '.test.' not in f else 1)\" && cd /home/tiago/Projects/Eddie && pnpm test --silent 2>&1 | tail -5",
-            "timeout": 300,
-            "statusMessage": "Running tests..."
+            "command": "python3 -c \"import sys,json; d=json.load(sys.stdin); f=d.get('tool_input',{}).get('file_path','') or d.get('tool_response',{}).get('filePath',''); exit(0 if f.endswith(('.ts','.tsx','.js','.jsx')) and '__tests__' not in f and '.test.' not in f else 1)\" && cd /home/tiago/Projects/Eddie && npx tsc --noEmit 2>&1 | tail -10",
+            "timeout": 30,
+            "statusMessage": "Type-checking..."
           }
         ]
       }

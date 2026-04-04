@@ -20,8 +20,15 @@ export async function tradingPartnersRoutes(app: FastifyInstance) {
       orgId: string; name: string; isaId: string; gsId: string; direction: string;
     };
     const existing = await app.prisma.tradingPartner.findFirst({ where: { isaId, orgId } });
-    if (existing) {
+    if (existing && existing.isActive) {
       return reply.status(409).send({ error: 'A trading partner with this ISA ID already exists' });
+    }
+    if (existing && !existing.isActive) {
+      const tp = await app.prisma.tradingPartner.update({
+        where: { id: existing.id },
+        data: { name, gsId, direction: direction as 'INBOUND' | 'OUTBOUND' | 'BOTH', isActive: true },
+      });
+      return reply.status(200).send(tp);
     }
     const tp = await app.prisma.tradingPartner.create({
       data: { orgId, name, isaId, gsId, direction: direction as 'INBOUND' | 'OUTBOUND' | 'BOTH', isActive: true },
@@ -66,6 +73,30 @@ export async function tradingPartnersRoutes(app: FastifyInstance) {
       data: body,
     });
     return reply.send(tp);
+  });
+
+  app.post('/:id/mappings', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['mappingIds'],
+        properties: {
+          mappingIds: { type: 'array', items: { type: 'string' }, minItems: 1 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { mappingIds } = request.body as { mappingIds: string[] };
+    const tp = await app.prisma.tradingPartner.findUnique({ where: { id } });
+    if (!tp) return reply.status(404).send({ error: 'Trading partner not found' });
+
+    const result = await app.prisma.mapping.updateMany({
+      where: { id: { in: mappingIds } },
+      data: { tradingPartnerId: id },
+    });
+
+    return reply.send({ updated: result.count });
   });
 
   app.delete('/:id', async (request, reply) => {

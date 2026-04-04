@@ -33,6 +33,8 @@ export const api = {
 
   patchTradingPartner: (id: string, body: unknown) =>
     apiFetch<TradingPartner>(`/api/trading-partners/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  assignMappings: (tradingPartnerId: string, mappingIds: string[]) =>
+    apiFetch<{ updated: number }>(`/api/trading-partners/${tradingPartnerId}/mappings`, { method: 'POST', body: JSON.stringify({ mappingIds }) }),
 
   getSftpConnections: (orgId: string) =>
     apiFetch<{ data: SftpConnection[] }>(`/api/sftp-connections?orgId=${orgId}`),

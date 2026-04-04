@@ -33,6 +33,7 @@ model TradingPartner {
 
   sftpConnections SftpConnection[]
   transactions    Transaction[]
+  mappings        Mapping[]
 
   @@index([orgId])
   @@index([isaId])
@@ -66,20 +67,23 @@ model SftpConnection {
 }
 
 model Mapping {
-  id                 String         @id @default(cuid())
+  id                 String          @id @default(cuid())
   orgId              String
-  org                Organization   @relation(fields: [orgId], references: [id])
+  org                Organization    @relation(fields: [orgId], references: [id])
+  tradingPartnerId   String?
+  tradingPartner     TradingPartner? @relation(fields: [tradingPartnerId], references: [id])
   name               String
   transactionSet     TransactionSet
   direction          MappingDirection
-  jsonataExpression  String         @db.Text
+  jsonataExpression  String          @db.Text
   guideId            String?
-  version            Int            @default(1)
-  isActive           Boolean        @default(true)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  version            Int             @default(1)
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   @@index([orgId])
+  @@index([tradingPartnerId])
 }
 
 enum TransactionSet {

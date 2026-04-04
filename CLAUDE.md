@@ -53,6 +53,7 @@ type MappingResult<T> =
 - **Downstream API tests:** Use `msw` (Mock Service Worker) to intercept HTTP
 - **Fixture files:** All EDI samples and expected JEDI outputs live in `/tests/fixtures/`
 - **Golden file pattern:** For mapping tests, assert against fixture JSON files
+- **Fixture cleanup:** When creating or modifying test fixtures, always clean up properly. Use `recursive: true` for mkdir calls. Verify fixture state doesn't leak between tests.
 
 ### Known Gotchas
 

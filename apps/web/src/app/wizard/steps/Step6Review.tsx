@@ -31,6 +31,13 @@ export function Step6Review({ state, onBack }: Props) {
     setActivating(true);
     setError('');
     try {
+      const allMappingIds = [
+        ...state.inboundMappings.map((m) => m.mappingId),
+        ...state.outboundMappings.map((m) => m.mappingId),
+      ];
+      if (allMappingIds.length > 0) {
+        await api.assignMappings(state.tradingPartnerId, allMappingIds);
+      }
       await api.patchTradingPartner(state.tradingPartnerId, { isActive: true });
       setDone(true);
     } catch (err) {

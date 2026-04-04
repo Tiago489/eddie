@@ -121,15 +121,14 @@ export async function processInboundJob(
     data: { jediPayload: jediPayload as object },
   });
 
-  // Apply mapping
-  const mapping = await prisma.mapping.findFirst({
-    where: {
-      orgId,
-      transactionSet,
-      direction: 'INBOUND',
-      isActive: true,
-    },
-  });
+  // Apply mapping — prefer partner-specific, fall back to generic (null tradingPartnerId)
+  const mapping =
+    await prisma.mapping.findFirst({
+      where: { orgId, tradingPartnerId, transactionSet, direction: 'INBOUND', isActive: true },
+    }) ??
+    await prisma.mapping.findFirst({
+      where: { orgId, tradingPartnerId: null, transactionSet, direction: 'INBOUND', isActive: true },
+    });
 
   let outboundPayload: unknown = jediPayload;
   if (mapping) {
