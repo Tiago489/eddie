@@ -35,7 +35,7 @@ export function buildApp(opts?: AppOptions): FastifyInstance {
 
   app.register(import('@fastify/cors'), {
     origin: ['http://localhost:3000'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   app.get('/health', async () => ({
