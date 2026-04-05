@@ -66,23 +66,28 @@ export async function processInboundJob(
   const transactionSet = mapTransactionSet(data.transactionSetId);
 
   // Duplicate detection
-  const existing = await prisma.transaction.findFirst({
-    where: { contentHash, status: { not: 'DUPLICATE' } },
-  });
-  if (existing) {
-    const dupTx = await prisma.transaction.create({
-      data: {
-        orgId,
-        tradingPartnerId,
-        contentHash,
-        isaControlNumber: existing.isaControlNumber,
-        transactionSet: existing.transactionSet,
-        direction: 'INBOUND',
-        status: 'DUPLICATE',
-        rawEdi,
-      },
+  const skipDedup = process.env.EDI_SKIP_DEDUP === 'true';
+  if (skipDedup) {
+    console.warn('[DEDUP SKIP] contentHash check bypassed — EDI_SKIP_DEDUP=true');
+  } else {
+    const existing = await prisma.transaction.findFirst({
+      where: { contentHash, status: { not: 'DUPLICATE' } },
     });
-    return { success: true, transactionId: dupTx.id };
+    if (existing) {
+      const dupTx = await prisma.transaction.create({
+        data: {
+          orgId,
+          tradingPartnerId,
+          contentHash,
+          isaControlNumber: existing.isaControlNumber,
+          transactionSet: existing.transactionSet,
+          direction: 'INBOUND',
+          status: 'DUPLICATE',
+          rawEdi,
+        },
+      });
+      return { success: true, transactionId: dupTx.id };
+    }
   }
 
   // Create transaction

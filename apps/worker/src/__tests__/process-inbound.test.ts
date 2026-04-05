@@ -112,6 +112,34 @@ describe('processInboundJob', { timeout: 60000 }, () => {
     expect(txs[1].status).toBe('DUPLICATE');
   });
 
+  it('should skip dedup when EDI_SKIP_DEDUP=true', async () => {
+    process.env.EDI_SKIP_DEDUP = 'true';
+    try {
+      const queue = createMockQueue();
+      const server = createMockApi('http://mock-api.test', 200, { ok: true });
+      server.listen();
+
+      const deps = { prisma: getDb(), queues: { ack997: queue } };
+      const payload = { rawEdi: RAW_EDI_204, tradingPartnerId, orgId };
+
+      const result1 = await processInboundJob(payload, deps);
+      expect(result1.success).toBe(true);
+
+      const result2 = await processInboundJob(payload, deps);
+      expect(result2.success).toBe(true);
+
+      server.close();
+
+      const txs = await getDb().transaction.findMany({ orderBy: { createdAt: 'asc' } });
+      expect(txs).toHaveLength(2);
+      // Both should be DELIVERED — no DUPLICATE
+      expect(txs[0].status).toBe('DELIVERED');
+      expect(txs[1].status).toBe('DELIVERED');
+    } finally {
+      delete process.env.EDI_SKIP_DEDUP;
+    }
+  });
+
   it('should mark transaction FAILED on parse error', async () => {
     const queue = createMockQueue();
 
