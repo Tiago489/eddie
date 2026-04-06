@@ -175,10 +175,10 @@ export async function processInboundJob(
     data: { outboundPayload: outboundPayload as object },
   });
 
-  // Deliver downstream
-  const downstreamApi = await prisma.downstreamApi.findFirst({
-    where: { orgId },
-  });
+  // Deliver downstream — prefer the default API, fall back to any configured API
+  const downstreamApi =
+    await prisma.downstreamApi.findFirst({ where: { orgId, isDefault: true } }) ??
+    await prisma.downstreamApi.findFirst({ where: { orgId } });
 
   if (downstreamApi) {
     await prisma.transaction.update({

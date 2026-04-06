@@ -58,8 +58,17 @@ export function buildApp(opts?: AppOptions): FastifyInstance {
 
 if (require.main === module) {
   const { PrismaClient } = require('@edi-platform/db');
+  const { Queue } = require('bullmq');
+  const Redis = require('ioredis');
   const prisma = new PrismaClient();
-  const app = buildApp({ prisma });
+  const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    maxRetriesPerRequest: null,
+  });
+  const queues: Record<string, { add: (name: string, data: unknown) => Promise<void> }> = {
+    'inbound-edi': new Queue('inbound-edi', { connection: redis }),
+    'outbound-edi': new Queue('outbound-edi', { connection: redis }),
+  };
+  const app = buildApp({ prisma, queues });
   const port = Number(process.env.API_PORT) || 3001;
   const host = process.env.API_HOST || '0.0.0.0';
 

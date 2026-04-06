@@ -97,7 +97,14 @@
       "Bash(pnpm --filter @edi-platform/api test -- --reporter=verbose)",
       "Bash(pnpm --filter @edi-platform/worker test -- --run)",
       "Bash(ls /home/tiago/Projects/Eddie/vitest*)",
-      "Bash(cat /home/tiago/Projects/Eddie/packages/*/package.json)"
+      "Bash(cat /home/tiago/Projects/Eddie/packages/*/package.json)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs -r kill -9)",
+      "Bash(lsof -ti:3000,3001)",
+      "Bash(fuser -k 3000/tcp 3001/tcp)",
+      "Bash(stty -a)",
+      "Bash(pkill -f \"tsx watch\")",
+      "Bash(pkill -f \"next dev\")"
     ]
   },
   "hooks": {

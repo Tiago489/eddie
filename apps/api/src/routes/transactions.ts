@@ -34,13 +34,15 @@ export async function transactionsRoutes(app: FastifyInstance) {
     if (!tx) return reply.status(404).send({ error: 'Not found' });
 
     const queue = app.queues?.['inbound-edi'];
-    if (queue) {
-      await queue.add('process-inbound', {
-        rawEdi: tx.rawEdi,
-        tradingPartnerId: tx.tradingPartnerId,
-        orgId: tx.orgId,
-      });
+    if (!queue) {
+      return reply.status(503).send({ error: 'Reprocess queue not available' });
     }
+
+    await queue.add('process-inbound', {
+      rawEdi: tx.rawEdi,
+      tradingPartnerId: tx.tradingPartnerId,
+      orgId: tx.orgId,
+    });
 
     return reply.send({ transactionId: tx.id, queued: true });
   });
