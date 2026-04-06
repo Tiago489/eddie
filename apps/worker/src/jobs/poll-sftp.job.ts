@@ -80,16 +80,23 @@ export async function pollSftpJob(
       const content = await transport.getFile(filePath);
       const contentHash = createHash('sha256').update(content).digest('hex');
 
-      const existing = await prisma.transaction.findFirst({
-        where: {
-          contentHash,
-          status: { notIn: ['DUPLICATE', 'FAILED'] },
-        },
-      });
-
       const fileName = filePath.split('/').pop() ?? filePath;
+      const skipDedup = process.env.EDI_SKIP_DEDUP === 'true';
 
-      if (existing) {
+      let isDuplicate = false;
+      if (!skipDedup) {
+        const existing = await prisma.transaction.findFirst({
+          where: {
+            contentHash,
+            status: { notIn: ['DUPLICATE', 'FAILED'] },
+          },
+        });
+        isDuplicate = !!existing;
+      } else {
+        logger.warn(`[DEDUP SKIP] Pre-enqueue contentHash check bypassed for ${fileName}`);
+      }
+
+      if (isDuplicate) {
         filesSkipped++;
         logger.info(`${fileName} skipped — duplicate`);
       } else {
